@@ -11,6 +11,12 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        "brand-green": "var(--brand-green)",
+        "brand-blue": "var(--brand-blue)",
+        "brand-purple": "var(--brand-purple)",
+        "brand-coral": "var(--brand-coral)",
+        "brand-dark": "var(--brand-dark)",
+        "brand-bg": "var(--brand-bg)",
       },
     },
   },
