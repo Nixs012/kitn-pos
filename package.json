@@ -2,8 +2,27 @@
   "name": "kitn-pos-monorepo",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint"
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "setup": "npx tsx scripts/setup-admin.ts",
+    "verify": "npx tsx scripts/verify-setup.ts",
+    "create-db": "npx tsx scripts/create-tables.ts",
+    "create-admin": "npx tsx scripts/create-admin.ts"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.100.0",
+    "@types/node-fetch": "^2.6.13",
+    "dotenv": "^17.3.1",
+    "node-fetch": "^3.3.2",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.0.1",
+    "nprogress": "^0.2.0"
   }
 }
