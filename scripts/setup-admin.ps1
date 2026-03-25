@@ -1,5 +1,25 @@
-$URL = "https://sfeizccfhwszyvwpqrmm.supabase.co"
-$KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmZWl6Y2NmaHdzenl2d3Bxcm1tIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDI2MjIzMCwiZXhwIjoyMDg5ODM4MjMwfQ.OHx0qpsmGL9YbFolQiMLAqCwr0H73m5CNRixHJrjnMk"
+# Get the directory of the script and load .env.local
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$envPath = Join-Path $scriptDir "..\.env.local"
+
+if (Test-Path $envPath) {
+    $envContent = Get-Content $envPath
+    foreach ($line in $envContent) {
+        if ($line -match "^\s*([^#\s][^=]*)=(.*)$") {
+            $name = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            Set-Content -Path "env:$name" -Value $value
+        }
+    }
+}
+
+$URL = $env:NEXT_PUBLIC_SUPABASE_URL
+$KEY = $env:SUPABASE_SERVICE_ROLE_KEY
+
+if (-not $URL -or -not $KEY) {
+    Write-Error "❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local"
+    exit 1
+}
 
 $headers = @{
     "apikey" = $KEY
