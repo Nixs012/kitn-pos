@@ -76,7 +76,7 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
         </NavGroup>
 
         <NavGroup title="Analytics">
-          <NavItem href="/sales" label="Sales Reports" icon={<BarChart3 size={18} />} active={pathname === '/sales'} />
+          <NavItem href="/reports/sales" label="Sales Reports" icon={<BarChart3 size={18} />} active={pathname === '/reports/sales'} />
           <NavItem href="/profit" label="Finance" icon={<TrendingUp size={18} />} active={pathname === '/profit'} />
           <NavItem href="/customers" label="Directory" icon={<Users size={18} />} active={pathname === '/customers'} />
         </NavGroup>
