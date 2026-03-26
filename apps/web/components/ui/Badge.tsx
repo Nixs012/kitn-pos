@@ -2,7 +2,7 @@ import React from 'react';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'success' | 'warning' | 'danger' | 'info' | 'gray';
+  variant?: 'success' | 'warning' | 'danger' | 'info' | 'gray' | 'purple';
   className?: string;
 }
 
@@ -12,6 +12,7 @@ const Badge = ({ children, variant = 'info', className = '' }: BadgeProps) => {
     warning: "bg-amber-100 text-amber-700 border-amber-200",
     danger: "bg-red-100 text-red-700 border-red-200",
     info: "bg-blue-100 text-blue-700 border-blue-200",
+    purple: "bg-purple-100 text-purple-700 border-purple-200",
     gray: "bg-gray-100 text-gray-600 border-gray-200"
   };
 
@@ -21,7 +22,8 @@ const Badge = ({ children, variant = 'info', className = '' }: BadgeProps) => {
         variant === 'success' ? 'bg-green-500' : 
         variant === 'warning' ? 'bg-amber-500' : 
         variant === 'danger' ? 'bg-red-500' : 
-        variant === 'info' ? 'bg-blue-500' : 'bg-gray-500'
+        variant === 'info' ? 'bg-blue-500' : 
+        variant === 'purple' ? 'bg-purple-500' : 'bg-gray-500'
       }`} />
       {children}
     </span>
