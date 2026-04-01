@@ -1,0 +1,175 @@
+﻿node.exe : C:\Users\Nixon\
+Documents\kitn-pos\apps\we
+b\app\(dashboard)\customer
+s\page.tsx:3:27: 
+'useEffect' is defined 
+but never used. [Error/@ty
+pescript-eslint/no-unused-
+vars]
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:
+\Users\Nixon\AppData\Roami
+ng\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (C  
+  :\Users\Nixon\...no-u   
+ nused-vars]:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\customers\page.tsx:
+47:58: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\customers\page.tsx:
+80:9: 'fetchInitialData' 
+is assigned a value but 
+never used. [Error/@typesc
+ript-eslint/no-unused-vars
+]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\dashboard\page.tsx:
+136:62: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\pos\page.tsx:26:53:
+ Unexpected any. Specify 
+a different type. [Error/@
+typescript-eslint/no-expli
+cit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\pos\page.tsx:26:69:
+ Unexpected any. Specify 
+a different type. [Error/@
+typescript-eslint/no-expli
+cit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\pos\page.tsx:85:44:
+ Unexpected any. Specify 
+a different type. [Error/@
+typescript-eslint/no-expli
+cit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\pos\page.tsx:96:44:
+ Unexpected any. Specify 
+a different type. [Error/@
+typescript-eslint/no-expli
+cit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\pos\page.tsx:521:45
+: Unexpected any. Specify 
+a different type. [Error/@
+typescript-eslint/no-expli
+cit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:89:38: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:93:50: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:94:52: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:223:30: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:380:54: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:4
+2:42: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:4
+3:40: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:4
+4:38: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:4
+5:44: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:1
+63:59: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:3
+18:9: 'supabase' is 
+assigned a value but 
+never used. [Error/@typesc
+ript-eslint/no-unused-vars
+]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\settings\page.tsx:3
+84:79: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+
+21 problems
+
+info  - Need to disable 
+some ESLint rules? Learn 
+more here: https://nextjs.
+org/docs/basic-features/es
+lint#disabling-rules

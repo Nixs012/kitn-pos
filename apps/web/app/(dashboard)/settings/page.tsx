@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { 
   Store, 
@@ -9,12 +10,8 @@ import {
   Plus, 
   Save, 
   Shield, 
-  Trash2, 
   Power,
-  ChevronRight,
   MapPin,
-  Mail,
-  Phone,
   Layout,
   UserPlus
 } from 'lucide-react';
@@ -42,16 +39,26 @@ export default function SettingsPage() {
   const supabase = createClient();
   const [activeTab, setActiveTab] = useState<'store' | 'users' | 'devices'>('store');
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [tenant, setTenant] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [profile, setProfile] = useState<{ id: string; role: string; tenant_id: string } | null>(null);
+  const [tenant, setTenant] = useState<{ 
+    id: string; 
+    name: string; 
+    business_type: string; 
+    county: string; 
+    phone?: string; 
+    email?: string; 
+    address?: string; 
+    receipt_footer?: string; 
+    vat_number?: string; 
+    logo_url?: string 
+  } | null>(null);
+  const [users, setUsers] = useState<Array<{ id: string; full_name: string; role: string; last_login?: string; is_active: boolean; branches?: { name: string } }>>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   
   // Modal states
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const fetchAllData = async () => {
+
+  const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -96,16 +103,17 @@ export default function SettingsPage() {
       if (be) throw be;
       setBranches(branchesData || []);
 
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [fetchAllData]);
 
   if (loading) return <div className="p-8 animate-pulse space-y-4"><div className="h-8 bg-gray-100 w-48 rounded" /><div className="h-64 bg-gray-50 rounded-2xl" /></div>;
 
@@ -142,7 +150,7 @@ export default function SettingsPage() {
       <div className="bg-white rounded-[24px] border-[0.5px] border-gray-200 shadow-sm overflow-hidden">
 
 
-        {activeTab === 'store' && <StoreSettingsTab tenant={tenant} onUpdate={fetchAllData} />}
+        {activeTab === 'store' && tenant && <StoreSettingsTab tenant={tenant} onUpdate={fetchAllData} />}
         {activeTab === 'users' && <UsersTab users={users} branches={branches} profile={profile} onUpdate={fetchAllData} />}
         {activeTab === 'devices' && <DevicesTab />}
       </div>
@@ -150,7 +158,7 @@ export default function SettingsPage() {
   );
 }
 
-const TabButton = ({ active, children, onClick, icon }: any) => (
+const TabButton = ({ active, children, onClick, icon }: { active: boolean, children: React.ReactNode, onClick: () => void, icon: React.ReactNode }) => (
   <button 
     onClick={onClick}
     className={`
@@ -163,7 +171,21 @@ const TabButton = ({ active, children, onClick, icon }: any) => (
   </button>
 );
 
-const StoreSettingsTab = ({ tenant, onUpdate }: any) => {
+const StoreSettingsTab = ({ tenant, onUpdate }: { 
+  tenant: { 
+    id: string; 
+    name: string; 
+    business_type: string; 
+    county: string; 
+    phone?: string; 
+    email?: string; 
+    address?: string; 
+    receipt_footer?: string; 
+    vat_number?: string; 
+    logo_url?: string 
+  }, 
+  onUpdate: () => void 
+}) => {
   const supabase = createClient();
   const [formData, setFormData] = useState(tenant || {});
   const [saving, setSaving] = useState(false);
@@ -189,8 +211,9 @@ const StoreSettingsTab = ({ tenant, onUpdate }: any) => {
       if (error) throw error;
       toast.success('Store settings updated successfully');
       onUpdate();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -259,7 +282,7 @@ const StoreSettingsTab = ({ tenant, onUpdate }: any) => {
           </h3>
           <div className="p-6 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center gap-4 hover:border-brand-green/30 transition-all group">
             {formData.logo_url ? (
-              <img src={formData.logo_url} className="w-20 h-20 object-contain" alt="Logo" />
+              <Image src={formData.logo_url} width={80} height={80} className="object-contain" alt="Logo" />
             ) : (
               <div className="w-20 h-20 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300 group-hover:text-brand-green transition-all">
                 <Plus size={32} />
@@ -273,7 +296,7 @@ const StoreSettingsTab = ({ tenant, onUpdate }: any) => {
             <label htmlFor="logo-upload" className="px-4 py-2 bg-gray-50 text-[9px] font-black uppercase tracking-widest text-gray-500 rounded-lg cursor-not-allowed hover:bg-gray-100 transition-all">
               Upload New Logo
             </label>
-            {!formData.logo_url && <p className="text-[8px] text-amber-500 font-black uppercase tracking-widest leading-tight text-center max-w-[150px]">Create 'logos' bucket in Supabase Storage to enable</p>}
+            {!formData.logo_url && <p className="text-[8px] text-amber-500 font-black uppercase tracking-widest leading-tight text-center max-w-[150px]">Create &apos;logos&apos; bucket in Supabase Storage to enable</p>}
           </div>
         </div>
 
@@ -304,8 +327,19 @@ const StoreSettingsTab = ({ tenant, onUpdate }: any) => {
   );
 };
 
-const UsersTab = ({ users, branches, profile, onUpdate }: any) => {
-  const supabase = createClient();
+const UsersTab = ({ users, branches, profile, onUpdate }: { 
+  users: Array<{ 
+    id: string; 
+    full_name: string; 
+    role: string; 
+    last_login?: string; 
+    is_active: boolean; 
+    branches?: { name: string } 
+  }>, 
+  branches: Array<{ id: string, name: string }>, 
+  profile: { tenant_id: string }, 
+  onUpdate: () => void 
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -337,8 +371,9 @@ const UsersTab = ({ users, branches, profile, onUpdate }: any) => {
       toast.success('User account created successfully');
       setIsModalOpen(false);
       onUpdate();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(message);
     }
   };
 
@@ -356,12 +391,12 @@ const UsersTab = ({ users, branches, profile, onUpdate }: any) => {
       </div>
 
       <Table headers={['Name', 'Role', 'Branch', 'Status', 'Last Login', 'Actions']}>
-        {users.map((u: any) => (
+        {users.map((u) => (
           <tr key={u.id} className="group hover:bg-gray-50/50 transition-colors">
             <td className="px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-black text-[10px]">
-                  {u.full_name?.split(' ').map((n:any) => n[0]).join('')}
+                  {u.full_name?.split(' ').map((n: string) => n[0]).join('')}
                 </div>
                 <div>
                   <p className="text-xs font-black text-brand-dark">{u.full_name}</p>
@@ -370,7 +405,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: any) => {
               </div>
             </td>
             <td className="px-6 py-4">
-              <Badge variant={ROLES.find(r => r.value === u.role)?.variant as any || 'gray'}>
+              <Badge variant={(ROLES.find(r => r.value === u.role)?.variant as 'danger' | 'info' | 'success' | 'gray') || 'gray'}>
                 {u.role}
               </Badge>
             </td>
@@ -424,7 +459,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: any) => {
                 value={formData.branch_id}
                 onChange={e => setFormData({...formData, branch_id: e.target.value})}
               >
-                {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map((b: { id: string, name: string }) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
           </div>

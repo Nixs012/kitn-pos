@@ -55,8 +55,9 @@ export async function pushQueue() {
 
       // Mark as synced
       await db.sales_queue.update(sale.id!, { sync_status: 'synced' });
-    } catch (error) {
-      console.error(`Failed to sync sale ${sale.receipt_number}:`, error);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Failed to sync sale ${sale.receipt_number}:`, message);
       await db.sales_queue.update(sale.id!, { 
         sync_status: 'failed',
         retry_count: sale.retry_count + 1 
@@ -85,7 +86,7 @@ export async function pullProducts() {
   }
 }
 
-export function resolveConflict(local: any, remote: any) {
+export function resolveConflict(local: { local_updated_at: string }, remote: { updated_at: string }) {
   // Simple "last write wins" based on remote timestamp
   return new Date(remote.updated_at) > new Date(local.local_updated_at) ? remote : local;
 }

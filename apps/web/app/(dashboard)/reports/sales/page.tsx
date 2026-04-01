@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -8,8 +8,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
 import { 
   DollarSign, 
@@ -20,12 +19,9 @@ import {
   Banknote, 
   Smartphone, 
   Download,
-  Calendar,
   ChevronLeft,
   ChevronRight,
-  Eye,
-  Search,
-  Filter
+  Eye
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Card from '@/components/ui/Card';
@@ -50,7 +46,24 @@ interface PaymentMetric {
   percentage: number;
 }
 
-const SummaryCard = ({ title, value, icon: Icon, colorClass, subText }: any) => (
+interface Sale {
+  id: string;
+  receipt_number: string;
+  created_at: string;
+  payment_method: string;
+  total_amount: number;
+  tax_amount: number;
+  discount: number;
+  user_profiles: { full_name: string };
+  sale_items: Array<{
+    id: string;
+    products: { name: string; unit?: string } | null;
+    quantity: number;
+    unit_price: number;
+  }>;
+}
+
+const SummaryCard = ({ title, value, icon: Icon, colorClass, subText }: { title: string, value: string | number, icon: React.ElementType, colorClass: string, subText: string }) => (
   <Card className="p-6 relative overflow-hidden group hover:border-brand-green/20 transition-all duration-500">
     <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${colorClass}`} />
     <div className="relative z-10 flex items-start justify-between">
@@ -66,7 +79,7 @@ const SummaryCard = ({ title, value, icon: Icon, colorClass, subText }: any) => 
   </Card>
 );
 
-const PaymentCard = ({ method, amount, percentage, icon: Icon, color }: any) => (
+const PaymentCard = ({ method, amount, percentage, icon: Icon, color }: { method: string, amount: number, percentage: number, icon: React.ElementType, color: string }) => (
   <Card className="p-6 border-none bg-gray-50/50 hover:bg-white hover:shadow-xl transition-all duration-500">
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-3">
@@ -90,23 +103,19 @@ const PaymentCard = ({ method, amount, percentage, icon: Icon, color }: any) => 
 export default function SalesReportsPage() {
   const [dateRange, setDateRange] = useState<DateRange>('today');
   const [loading, setLoading] = useState(true);
-  const [sales, setSales] = useState<any[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [metrics, setMetrics] = useState<SalesMetric>({ totalRevenue: 0, transactionCount: 0, averageSale: 0, totalItems: 0 });
   const [paymentMetrics, setPaymentMetrics] = useState<PaymentMetric[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
-  const [selectedSale, setSelectedSale] = useState<any | null>(null);
+  const [chartData, setChartData] = useState<Array<{ day: string; revenue: number }>>([]);
+  const [topProducts, setTopProducts] = useState<Array<{ name: string; unitsSold: number; revenue: number; rank: number; percentage: string | number }>>([]);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchSalesData();
-  }, [dateRange]);
-
-  const fetchSalesData = async () => {
+  const fetchSalesData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -120,7 +129,7 @@ export default function SalesReportsPage() {
 
       if (!profile) return;
 
-      let startDate = new Date();
+      const startDate = new Date();
       if (dateRange === 'today') startDate.setHours(0,0,0,0);
       else if (dateRange === 'week') startDate.setDate(startDate.getDate() - 7);
       else if (dateRange === 'month') startDate.setMonth(startDate.getMonth() - 1);
@@ -144,9 +153,9 @@ export default function SalesReportsPage() {
       
       // Calculate Metrics
       let totalRev = 0;
-      let totalItems = 0;
+      let totalItemsValue = 0;
       const payMap: Record<string, number> = { mpesa: 0, cash: 0, card: 0 };
-      const prodMap: Record<string, any> = {};
+      const prodMap: Record<string, { name: string, unitsSold: number, revenue: number }> = {};
       const dayMap: Record<string, number> = {};
 
       salesData?.forEach(sale => {
@@ -156,8 +165,8 @@ export default function SalesReportsPage() {
         const day = new Date(sale.created_at).toLocaleDateString('en-US', { weekday: 'short' });
         dayMap[day] = (dayMap[day] || 0) + Number(sale.total_amount);
 
-        sale.sale_items?.forEach((item: any) => {
-          totalItems += Number(item.quantity);
+        sale.sale_items?.forEach((item: { quantity: number; unit_price: number; products: { name: string; unit?: string } | null }) => {
+          totalItemsValue += Number(item.quantity);
           const pName = item.products?.name || 'Unknown';
           if (!prodMap[pName]) prodMap[pName] = { name: pName, unitsSold: 0, revenue: 0 };
           prodMap[pName].unitsSold += Number(item.quantity);
@@ -169,7 +178,7 @@ export default function SalesReportsPage() {
         totalRevenue: totalRev,
         transactionCount: salesData?.length || 0,
         averageSale: salesData?.length ? totalRev / salesData.length : 0,
-        totalItems
+        totalItems: totalItemsValue
       });
 
       setPaymentMetrics([
@@ -187,12 +196,17 @@ export default function SalesReportsPage() {
           .map((p, i) => ({ ...p, rank: i + 1, percentage: totalRev ? ((p.revenue / totalRev) * 100).toFixed(1) : 0 }))
       );
 
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error('Sales reports fetch error:', err);
       toast.error('Failed to load sales reports');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, supabase]);
+
+  useEffect(() => {
+    fetchSalesData();
+  }, [fetchSalesData]);
 
   const exportCSV = () => {
     const headers = ['Receipt #', 'Date', 'Cashier', 'Method', 'Tax', 'Discount', 'Total'];
@@ -223,7 +237,7 @@ export default function SalesReportsPage() {
     return sales.slice(start, start + pageSize);
   }, [sales, page]);
 
-  const viewReceipt = (sale: any) => {
+  const viewReceipt = (sale: Sale) => {
     setSelectedSale(sale);
     setIsReceiptOpen(true);
   };
@@ -380,7 +394,7 @@ export default function SalesReportsPage() {
             <div className="space-y-3">
               <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] px-2">Itemized Breakdown</h4>
               <div className="space-y-2">
-                {selectedSale.sale_items?.map((item: any) => (
+                {selectedSale.sale_items?.map((item: { id: string; products: { name: string; unit?: string } | null; quantity: number; unit_price: number }) => (
                   <div key={item.id} className="flex justify-between items-center p-4 bg-white border border-gray-50 rounded-2xl shadow-sm">
                     <div>
                       <p className="font-bold text-brand-dark text-sm">{item.products?.name}</p>

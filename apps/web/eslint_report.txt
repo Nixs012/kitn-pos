@@ -1,0 +1,36 @@
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\app\(dashboard)\customers\page.tsx
+  136:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  158:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\app\(dashboard)\dashboard\page.tsx
+  102:11  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\app\(dashboard)\pos\page.tsx
+    3:38  error  'useRef' is defined but never used                   @typescript-eslint/no-unused-vars
+    3:46  error  'useMemo' is defined but never used                  @typescript-eslint/no-unused-vars
+   19:8   error  'Card' is defined but never used                     @typescript-eslint/no-unused-vars
+  119:10  error  'loading' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  131:10  error  'mpesaStatus' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  131:23  error  'setMpesaStatus' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\app\api\mpesa\callback\route.ts
+  19:34  error  'saleError' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\app\api\mpesa\status\[checkoutId]\route.ts
+  13:25  error  'error' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\components\layout\Sidebar.tsx
+  27:26  error  'icon' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\lib\mpesa\daraja.ts
+  1:8  error  'crypto' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\middleware.ts
+  16:48  error  'options' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Nixon\Documents\kitn-pos\apps\web\stores\cartStore.ts
+  16:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 15 problems (15 errors, 0 warnings)
+

@@ -1,22 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   ShoppingBag, 
   Percent, 
   Receipt, 
   Tag, 
-  Calendar,
   Filter,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
 import { 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -30,7 +26,6 @@ import {
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import { toast } from 'sonner';
@@ -59,8 +54,8 @@ interface ProductProfit {
 
 const COLORS = ['#1D9E75', '#8B5CF6', '#3B82F6', '#F59E0B'];
 
-const MetricCard = ({ title, value, subValue, icon: Icon, trend, prefix = "KES " }: any) => (
-  <Card className="p-6 relative overflow-hidden group hover:border-brand-green/20 transition-all duration-500">
+const MetricCard = ({ title, value, subValue, icon: Icon, trend, prefix = "KES ", className }: { title: string, value: number, subValue: string, icon: React.ElementType, trend?: number, prefix?: string, className?: string }) => (
+  <Card className={`p-6 relative overflow-hidden group hover:border-brand-green/20 transition-all duration-500 ${className || ''}`}>
     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
       <Icon size={80} />
     </div>
@@ -95,24 +90,16 @@ export default function FinancePage() {
     discountsGiven: 0,
     netRevenue: 0
   });
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [paymentData, setPaymentData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<Array<{ date: string; revenue: number; profit: number }>>([]);
+  const [paymentData, setPaymentData] = useState<Array<{ name: string; value: number }>>([]);
   const [productProfitData, setProductProfitData] = useState<ProductProfit[]>([]);
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
 
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchInitialInfo();
-  }, []);
-
-  useEffect(() => {
-    if (tenantId) fetchFinanceData();
-  }, [dateRange, selectedBranch, tenantId]);
-
-  const fetchInitialInfo = async () => {
+  const fetchInitialInfo = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -125,7 +112,6 @@ export default function FinancePage() {
 
       if (profile) {
         setTenantId(profile.tenant_id);
-        // Fetch branches
         const { data: branchesData } = await supabase
           .from('branches')
           .select('id, name')
@@ -135,21 +121,23 @@ export default function FinancePage() {
     } catch (error) {
       console.error('Initial Info Error:', error);
     }
-  };
+  }, [supabase]);
 
-  const fetchFinanceData = async () => {
+  useEffect(() => {
+    fetchInitialInfo();
+  }, [fetchInitialInfo]);
+
+  const fetchFinanceData = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      // Define date filter
-      let startDate = new Date();
+      const startDate = new Date();
       if (dateRange === 'today') startDate.setHours(0,0,0,0);
       else if (dateRange === 'week') startDate.setDate(startDate.getDate() - 7);
       else if (dateRange === 'month') startDate.setMonth(startDate.getMonth() - 1);
       else if (dateRange === 'year') startDate.setFullYear(startDate.getFullYear() - 1);
 
-      // Fetch sales joined with branches!inner to filter by tenant_id
-      let query = supabase
+      const query = supabase
         .from('sales')
         .select(`
           *,
@@ -164,11 +152,10 @@ export default function FinancePage() {
         .order('created_at', { ascending: true });
 
       if (selectedBranch !== 'all') {
-        query = query.eq('branch_id', selectedBranch);
+        query.eq('branch_id', selectedBranch);
       }
 
       const { data: sales, error: salesError } = await query;
-
       if (salesError) throw salesError;
 
       // Aggregations
@@ -189,7 +176,12 @@ export default function FinancePage() {
         
         payMap[sale.payment_method] = (payMap[sale.payment_method] || 0) + Number(sale.total_amount);
 
-        sale.sale_items?.forEach((item: any) => {
+        sale.sale_items?.forEach((item: { 
+          quantity: number; 
+          unit_price: number; 
+          product_id: string;
+          products?: { name: string; buying_price: number } | null 
+        }) => {
           const revenue = Number(item.quantity) * Number(item.unit_price);
           const cogs = Number(item.quantity) * Number(item.products?.buying_price || 0);
           const profit = revenue - cogs;
@@ -199,10 +191,11 @@ export default function FinancePage() {
           dailyMap[date].revenue += revenue;
           dailyMap[date].profit += profit;
 
-          if (!prodMap[item.products?.name]) {
-            prodMap[item.products?.name] = {
+          const prodName = item.products?.name || 'Unknown';
+          if (!prodMap[prodName]) {
+            prodMap[prodName] = {
               id: item.product_id,
-              name: item.products?.name || 'Unknown',
+              name: prodName,
               unitsSold: 0,
               revenue: 0,
               cogs: 0,
@@ -210,7 +203,7 @@ export default function FinancePage() {
               margin: 0
             };
           }
-          const p = prodMap[item.products?.name];
+          const p = prodMap[prodName];
           p.unitsSold += Number(item.quantity);
           p.revenue += revenue;
           p.cogs += cogs;
@@ -245,13 +238,17 @@ export default function FinancePage() {
 
       setProductProfitData(Object.values(prodMap).sort((a, b) => b.profit - a.profit));
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Finance Fetch Error:', error);
       toast.error('Failed to load financial data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, dateRange, selectedBranch, supabase]);
+
+  useEffect(() => {
+    fetchFinanceData();
+  }, [fetchFinanceData]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">

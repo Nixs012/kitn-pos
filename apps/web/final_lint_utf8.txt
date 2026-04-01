@@ -1,0 +1,60 @@
+﻿node.exe : C:\Users\Nixon\
+Documents\kitn-pos\apps\we
+b\app\(dashboard)\pos\page
+.tsx:26:184: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:
+\Users\Nixon\AppData\Roami
+ng\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (C  
+  :\Users\Nixon\...o-ex   
+ plicit-any]:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\pos\page.tsx:105:16
+1: Unexpected any. 
+Specify a different type. 
+[Error/@typescript-eslint/
+no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:89:38: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:94:232: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+C:\Users\Nixon\Documents\k
+itn-pos\apps\web\app\(dash
+board)\reports\sales\page.
+tsx:223:210: Unexpected 
+any. Specify a different 
+type. [Error/@typescript-e
+slint/no-explicit-any]
+
+5 problems
+
+info  - Need to disable 
+some ESLint rules? Learn 
+more here: https://nextjs.
+org/docs/basic-features/es
+lint#disabling-rules

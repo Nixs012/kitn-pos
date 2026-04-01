@@ -37,11 +37,12 @@ export async function POST(req: NextRequest) {
       success: true, 
       checkoutRequestID: mpesaResponse.CheckoutRequestID 
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('STK Push Error:', error);
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Internal Server Error' 
+      error: message 
     }, { status: 400 });
   }
 }

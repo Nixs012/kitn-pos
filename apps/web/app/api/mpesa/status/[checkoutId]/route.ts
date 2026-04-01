@@ -10,7 +10,7 @@ export async function GET(
     const supabase = await createClient();
 
     // Find the sale record with this checkout ID
-    const { data: sale, error } = await supabase
+    const { data: sale } = await supabase
       .from('sales')
       .select('id, mpesa_ref, total_amount')
       .eq('mpesa_ref', checkoutId)
@@ -33,7 +33,8 @@ export async function GET(
       receipt: sale.mpesa_ref 
     });
 
-  } catch (error: any) {
-    return NextResponse.json({ status: 'error', message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ status: 'error', message }, { status: 500 });
   }
 }

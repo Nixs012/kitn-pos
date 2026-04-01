@@ -1,17 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   Plus, 
   Search, 
   Edit2, 
   Trash2, 
-  Filter, 
   Download,
   Package,
-  ChevronRight,
-  MoreVertical,
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -76,7 +73,7 @@ export default function ProductsPage() {
     initial_stock: 0
   });
 
-  const fetchProducts = async (tenantId?: string) => {
+  const fetchProducts = useCallback(async (tenantId?: string) => {
     try {
       setLoading(true);
       const tid = tenantId || profile?.tenant_id;
@@ -93,14 +90,15 @@ export default function ProductsPage() {
 
       if (error) throw error;
       setProducts(data || []);
-    } catch (error: any) {
-      toast.error('Failed to load products: ' + error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Failed to load products: ' + message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, profile?.tenant_id]);
 
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -114,14 +112,15 @@ export default function ProductsPage() {
       if (profileError) throw profileError;
       setProfile(profileData);
       fetchProducts(profileData.tenant_id);
-    } catch (error: any) {
-      toast.error('Session error: ' + error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error('Session error: ' + message);
     }
-  };
+  }, [supabase, fetchProducts]);
 
   useEffect(() => {
     loadInitialData();
-  }, []);
+  }, [loadInitialData]);
 
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -169,8 +168,9 @@ export default function ProductsPage() {
         name: '', barcode: '', sku: '', category: 'All',
         buying_price: 0, selling_price: 0, vat_rate: 16, unit: 'pcs', initial_stock: 0
       });
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(message);
     }
   };
 
@@ -198,8 +198,9 @@ export default function ProductsPage() {
       toast.success('Product updated');
       setIsEditModalOpen(false);
       fetchProducts();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(message);
     }
   };
 
@@ -217,8 +218,9 @@ export default function ProductsPage() {
       toast.success('Product deleted');
       setIsDeleteModalOpen(false);
       fetchProducts();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(message);
     }
   };
 
@@ -300,7 +302,7 @@ export default function ProductsPage() {
           const stock = p.inventory?.[0]?.quantity || 0;
           const reorder = p.inventory?.[0]?.reorder_level || 10;
           
-          let stockVariant: any = 'success';
+          let stockVariant: 'success' | 'danger' | 'warning' | 'info' | 'gray' | 'purple' | 'brand' = 'success';
           let stockLabel = 'In Stock';
           if (stock <= 0) {
             stockVariant = 'danger';
@@ -475,7 +477,7 @@ export default function ProductsPage() {
           </div>
           <div>
             <p className="text-sm font-bold text-brand-dark">Are you sure you want to delete this product?</p>
-            <p className="text-xs text-brand-blue font-black mt-2">"{currentProduct?.name}"</p>
+            <p className="text-xs text-brand-blue font-black mt-2">&ldquo;{currentProduct?.name}&rdquo;</p>
             <p className="text-[10px] text-gray-400 mt-4 leading-relaxed">
               This action will mark the product as <span className="text-red-500 font-bold uppercase">Inactive</span>. 
               It will no longer appear in the POS terminal but transaction history will be preserved.

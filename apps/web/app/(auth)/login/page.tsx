@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import KitnLogo from '@/components/ui/KitnLogo'
 import { toast } from 'sonner'
-import { Key, Mail, Phone, Lock, ChevronRight, UserCircle2, ShieldCheck, UserCog, User, Eye } from 'lucide-react'
+import { Mail, Lock, ChevronRight, UserCircle2 } from 'lucide-react'
 
 type Role = 'admin' | 'manager' | 'cashier' | 'viewer'
 

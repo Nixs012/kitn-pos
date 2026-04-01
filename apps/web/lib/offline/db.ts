@@ -13,7 +13,7 @@ export interface LocalProduct {
   unit: string;
   image_url: string | null;
   is_active: boolean;
-  inventory?: any[];
+  inventory?: unknown[];
   local_updated_at: string;
 }
 

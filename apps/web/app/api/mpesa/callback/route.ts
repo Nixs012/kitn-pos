@@ -13,10 +13,10 @@ export async function POST(req: NextRequest) {
 
     if (resultCode === 0) {
       // Success
-      const mpesaReceipt = stkCallback.CallbackMetadata.Item.find((i: any) => i.Name === 'MpesaReceiptNumber')?.Value;
+      const mpesaReceipt = stkCallback.CallbackMetadata.Item.find((item: { Name: string; Value: string }) => item.Name === 'MpesaReceiptNumber')?.Value;
       
       // Update sale record
-      const { data: sale, error: saleError } = await supabase
+      const { data: sale } = await supabase
         .from('sales')
         .update({
           mpesa_ref: mpesaReceipt,
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ResultCode: 0, ResultDesc: 'Success' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('M-Pesa Callback Error:', error);
     return NextResponse.json({ ResultCode: 1, ResultDesc: 'Internal Error' }, { status: 500 });
   }

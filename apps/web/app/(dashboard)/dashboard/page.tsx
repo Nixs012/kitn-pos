@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   TrendingUp, 
@@ -80,7 +80,7 @@ export default function DashboardPage() {
   const [topProducts, setTopProducts] = useState<ProductSale[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -133,8 +133,9 @@ export default function DashboardPage() {
 
       if (topData) {
         const productMap: Record<string, number> = {};
-        topData.forEach((item: any) => {
-          const name = item.products?.name || 'Unknown';
+        topData.forEach((item: { quantity: number; products: { name: string } | Array<{ name: string }> | null }) => {
+          const product = Array.isArray(item.products) ? item.products[0] : item.products;
+          const name = (product as { name: string } | null)?.name || 'Unknown';
           productMap[name] = (productMap[name] || 0) + item.quantity;
         });
         const sorted = Object.entries(productMap)
@@ -149,7 +150,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
     fetchData();
@@ -175,7 +176,7 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchData, supabase]);
 
   if (loading) {
     return (

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Users, Truck, UserPlus, UserCheck, Phone, Mail, FileText, ChevronRight, History } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Plus, Search, Users, Truck, UserCheck, Phone, Mail, FileText, ChevronRight, History } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -44,22 +44,51 @@ export default function DirectoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<Array<{ 
+    id: string; 
+    created_at: string; 
+    total_amount: number; 
+    payment_method: string; 
+    receipt_number: string 
+  }>>([]);
   const [tenantId, setTenantId] = useState<string | null>(null);
 
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
+  const fetchCustomers = useCallback(async (tid: string) => {
+    const { data } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('tenant_id', tid)
+      .order('full_name');
+    
+    if (data) {
+      // Mocking purchase data for now, would typically come from a view or separate join
+      const customersWithStats = data.map(c => ({
+        ...c,
+        total_purchases: Math.floor(Math.random() * 50000),
+        last_purchase: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toISOString()
+      }));
+      setCustomers(customersWithStats);
+    }
+  }, [supabase]);
 
-  const fetchInitialData = async () => {
+  const fetchSuppliers = useCallback(async (tid: string) => {
+    const { data } = await supabase
+      .from('suppliers')
+      .select('*')
+      .eq('tenant_id', tid)
+      .order('company_name');
+    
+    if (data) setSuppliers(data);
+  }, [supabase]);
+
+  const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      // Get tenant_id from user metadata or profile
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('tenant_id')
@@ -77,35 +106,11 @@ export default function DirectoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase, fetchCustomers, fetchSuppliers]);
 
-  const fetchCustomers = async (tid: string) => {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('tenant_id', tid)
-      .order('full_name');
-    
-    if (data) {
-      // Mocking purchase data for now, would typically come from a view or separate join
-      const customersWithStats = data.map(c => ({
-        ...c,
-        total_purchases: Math.floor(Math.random() * 50000),
-        last_purchase: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toISOString()
-      }));
-      setCustomers(customersWithStats);
-    }
-  };
-
-  const fetchSuppliers = async (tid: string) => {
-    const { data, error } = await supabase
-      .from('suppliers')
-      .select('*')
-      .eq('tenant_id', tid)
-      .order('company_name');
-    
-    if (data) setSuppliers(data);
-  };
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => 
@@ -126,9 +131,9 @@ export default function DirectoryPage() {
   const handleAddEntry = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const entryData: any = {};
+    const entryData: Record<string, string | number | boolean | null> = {};
     formData.forEach((value, key) => {
-      entryData[key] = value;
+      entryData[key] = value as string;
     });
 
     try {
@@ -148,8 +153,9 @@ export default function DirectoryPage() {
         fetchSuppliers(tenantId!);
       }
       setIsModalOpen(false);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast.error(message);
     }
   };
 
@@ -157,7 +163,7 @@ export default function DirectoryPage() {
     setSelectedCustomer(customer);
     setIsDetailOpen(true);
     // Fetch from sales table logic here
-    const { data } = await supabase
+    await supabase
       .from('sales')
       .select('*, branches(name)')
       .eq('id', customer.id); // Placeholder logic as customer_id might be needed in sales table
@@ -383,7 +389,7 @@ export default function DirectoryPage() {
       <Modal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        title={selectedCustomer?.full_name || 'Customer Details'}
+        title={selectedCustomer?.full_name || "Customer Details"}
         size="lg"
       >
         {selectedCustomer && (

@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       emailRedirect: linkData.properties.email_otp // This might be used if we redirect to callback
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('PIN Login Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

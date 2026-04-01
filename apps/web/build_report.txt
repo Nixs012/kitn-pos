@@ -1,0 +1,26 @@
+  ▲ Next.js 14.2.23
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./app/(dashboard)/customers/page.tsx
+83:6  Warning: React Hook useCallback has missing dependencies: 'fetchCustomers' and 'fetchSuppliers'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/pos/page.tsx
+133:6  Warning: React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+Failed to compile.
+
+.next/types/app/(dashboard)/admin/audit-log/page.ts:2:24
+Type error: File 'C:/Users/Nixon/Documents/kitn-pos/apps/web/app/(dashboard)/admin/audit-log/page.tsx' is not a module.
+
+[0m [90m 1 |[39m [90m// File: C:\Users\Nixon\Documents\kitn-pos\apps\web\app\(dashboard)\admin\audit-log\page.tsx[39m[0m
+[0m[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [33m*[39m [36mas[39m entry [36mfrom[39m [32m'../../../../../../app/(dashboard)/admin/audit-log/page.js'[39m[0m
+[0m [90m   |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 3 |[39m [36mimport[39m type { [33mResolvingMetadata[39m[33m,[39m [33mResolvingViewport[39m } [36mfrom[39m [32m'next/dist/lib/metadata/types/metadata-interface.js'[39m[0m
+[0m [90m 4 |[39m[0m
+[0m [90m 5 |[39m type [33mTEntry[39m [33m=[39m [36mtypeof[39m [36mimport[39m([32m'../../../../../../app/(dashboard)/admin/audit-log/page.js'[39m)[0m
+Static worker exited with code: 1 and signal: null
