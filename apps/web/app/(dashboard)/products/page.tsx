@@ -416,7 +416,11 @@ export default function ProductsPage() {
               value={formData.category}
               onChange={e => setFormData({...formData, category: e.target.value})}
             >
-              {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+              {CATEGORIES.filter(c => c !== 'All').map(c => (
+                  <option key={c} value={c} className="text-black bg-white">
+                    {c}
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -445,8 +449,8 @@ export default function ProductsPage() {
                 value={formData.vat_rate}
                 onChange={e => setFormData({...formData, vat_rate: Number(e.target.value)})}
               >
-                <option value={0}>0% (Exempt)</option>
-                <option value={16}>16% (Standard)</option>
+                <option value={0} className="text-black bg-white">0% (Exempt)</option>
+                <option value={16} className="text-black bg-white">16% (Standard)</option>
               </select>
             </div>
             <div className="space-y-1.5">
@@ -456,7 +460,11 @@ export default function ProductsPage() {
                 value={formData.unit}
                 onChange={e => setFormData({...formData, unit: e.target.value})}
               >
-                {UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)}
+                {UNITS.map(u => (
+                    <option key={u} value={u} className="text-black bg-white">
+                      {u.toUpperCase()}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
