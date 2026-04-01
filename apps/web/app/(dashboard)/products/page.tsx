@@ -249,6 +249,7 @@ export default function ProductsPage() {
   });
 
   return (
+    <>
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -375,131 +376,132 @@ export default function ProductsPage() {
         })}
       </Table>
 
-      {/* Add/Edit Modal Content */}
-      <Modal 
-        isOpen={isAddModalOpen || isEditModalOpen} 
-        onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); }}
-        title={isAddModalOpen ? 'Create New Product' : 'Edit Product'}
-        size="lg"
-      >
-        <form onSubmit={isAddModalOpen ? handleAddProduct : handleEditProduct} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input 
-              label="Product Name*" 
-              required 
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              placeholder="e.g. Premium Basmati Rice"
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Input 
-                label="Barcode" 
-                value={formData.barcode}
-                onChange={e => setFormData({...formData, barcode: e.target.value})}
-                placeholder="600123..."
-              />
-              <Input 
-                label="SKU" 
-                value={formData.sku}
-                onChange={e => setFormData({...formData, sku: e.target.value})}
-                placeholder="PROD-001"
-              />
-            </div>
+    </div>
 
+    {/* Modals moved outside of the animated container to prevent stacking context clipping */}
+    <Modal 
+      isOpen={isAddModalOpen || isEditModalOpen} 
+      onClose={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); }}
+      title={isAddModalOpen ? 'Create New Product' : 'Edit Product'}
+      size="lg"
+    >
+      <form onSubmit={isAddModalOpen ? handleAddProduct : handleEditProduct} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input 
+            label="Product Name*" 
+            required 
+            value={formData.name}
+            onChange={e => setFormData({...formData, name: e.target.value})}
+            placeholder="e.g. Premium Basmati Rice"
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Barcode" 
+              value={formData.barcode}
+              onChange={e => setFormData({...formData, barcode: e.target.value})}
+              placeholder="600123..."
+            />
+            <Input 
+              label="SKU" 
+              value={formData.sku}
+              onChange={e => setFormData({...formData, sku: e.target.value})}
+              placeholder="PROD-001"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Category</label>
+            <select 
+              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
+              value={formData.category}
+              onChange={e => setFormData({...formData, category: e.target.value})}
+            >
+              {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label="Buying Price (KES)*" 
+              type="number" 
+              required 
+              value={formData.buying_price}
+              onChange={e => setFormData({...formData, buying_price: Number(e.target.value)})}
+            />
+            <Input 
+              label="Selling Price (KES)*" 
+              type="number" 
+              required 
+              value={formData.selling_price}
+              onChange={e => setFormData({...formData, selling_price: Number(e.target.value)})}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Category</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">VAT Rate</label>
               <select 
                 className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
-                value={formData.category}
-                onChange={e => setFormData({...formData, category: e.target.value})}
+                value={formData.vat_rate}
+                onChange={e => setFormData({...formData, vat_rate: Number(e.target.value)})}
               >
-                {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                <option value={0}>0% (Exempt)</option>
+                <option value={16}>16% (Standard)</option>
               </select>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input 
-                label="Buying Price (KES)*" 
-                type="number" 
-                required 
-                value={formData.buying_price}
-                onChange={e => setFormData({...formData, buying_price: Number(e.target.value)})}
-              />
-              <Input 
-                label="Selling Price (KES)*" 
-                type="number" 
-                required 
-                value={formData.selling_price}
-                onChange={e => setFormData({...formData, selling_price: Number(e.target.value)})}
-              />
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Unit</label>
+              <select 
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
+                value={formData.unit}
+                onChange={e => setFormData({...formData, unit: e.target.value})}
+              >
+                {UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)}
+              </select>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">VAT Rate</label>
-                <select 
-                  className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
-                  value={formData.vat_rate}
-                  onChange={e => setFormData({...formData, vat_rate: Number(e.target.value)})}
-                >
-                  <option value={0}>0% (Exempt)</option>
-                  <option value={16}>16% (Standard)</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Unit</label>
-                <select 
-                  className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
-                  value={formData.unit}
-                  onChange={e => setFormData({...formData, unit: e.target.value})}
-                >
-                  {UNITS.map(u => <option key={u} value={u}>{u.toUpperCase()}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {isAddModalOpen && (
-              <Input 
-                label="Initial Stock Quantity" 
-                type="number" 
-                value={formData.initial_stock}
-                onChange={e => setFormData({...formData, initial_stock: Number(e.target.value)})}
-              />
-            )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
-            <Button type="button" variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); }}>Cancel</Button>
-            <Button type="submit">{isAddModalOpen ? 'Create Product' : 'Save Changes'}</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Product"
-        size="sm"
-      >
-        <div className="space-y-6 text-center">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-            <AlertCircle className="text-red-500" size={32} />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-brand-dark">Are you sure you want to delete this product?</p>
-            <p className="text-xs text-brand-blue font-black mt-2">&ldquo;{currentProduct?.name}&rdquo;</p>
-            <p className="text-[10px] text-gray-400 mt-4 leading-relaxed">
-              This action will mark the product as <span className="text-red-500 font-bold uppercase">Inactive</span>. 
-              It will no longer appear in the POS terminal but transaction history will be preserved.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Button variant="danger" onClick={handleDeleteProduct}>Confirm Delete</Button>
-            <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-          </div>
+          {isAddModalOpen && (
+            <Input 
+              label="Initial Stock Quantity" 
+              type="number" 
+              value={formData.initial_stock}
+              onChange={e => setFormData({...formData, initial_stock: Number(e.target.value)})}
+            />
+          )}
         </div>
-      </Modal>
-    </div>
-  );
+
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
+          <Button type="button" variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsEditModalOpen(false); }}>Cancel</Button>
+          <Button type="submit">{isAddModalOpen ? 'Create Product' : 'Save Changes'}</Button>
+        </div>
+      </form>
+    </Modal>
+
+    <Modal
+      isOpen={isDeleteModalOpen}
+      onClose={() => setIsDeleteModalOpen(false)}
+      title="Delete Product"
+      size="sm"
+    >
+      <div className="space-y-6 text-center">
+        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+          <AlertCircle className="text-red-500" size={32} />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-brand-dark">Are you sure you want to delete this product?</p>
+          <p className="text-xs text-brand-blue font-black mt-2">&ldquo;{currentProduct?.name}&rdquo;</p>
+          <p className="text-[10px] text-gray-400 mt-4 leading-relaxed">
+            This action will mark the product as <span className="text-red-500 font-bold uppercase">Inactive</span>. 
+            It will no longer appear in the POS terminal but transaction history will be preserved.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Button variant="danger" onClick={handleDeleteProduct}>Confirm Delete</Button>
+          <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+        </div>
+      </div>
+    </Modal>
+  </>
+);
 }
