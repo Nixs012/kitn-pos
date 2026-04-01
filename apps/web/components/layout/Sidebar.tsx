@@ -24,7 +24,7 @@ interface NavItemProps {
   active?: boolean;
 }
 
-const NavItem = ({ href, icon, label, active }: NavItemProps) => (
+const NavItem = ({ href, label, active }: NavItemProps) => (
   <Link 
     href={href}
     className={`flex items-center gap-3 px-4 py-2.5 mx-2.5 rounded-[12px] transition-all duration-300 group ${

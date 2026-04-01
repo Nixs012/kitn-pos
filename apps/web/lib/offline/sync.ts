@@ -1,4 +1,4 @@
-import { db, type SalesQueueEntry, type SaleItemsQueueEntry } from './db';
+import { db } from './db';
 import { createClient } from '@/lib/supabase/client';
 
 export async function pushQueue() {

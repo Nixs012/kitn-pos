@@ -1,0 +1,571 @@
+﻿node.exe : [{"filePath":"C
+:\\Users\\Nixon\\Documents
+\\kitn-pos\\apps\\web\\com
+ponents\\layout\\Sidebar.t
+sx","messages":[{"ruleId":
+"@typescript-eslint/no-unu
+sed-vars","severity":2,"me
+ssage":"'icon' is defined 
+but never used.","line":27
+,"column":26,"nodeType":"I
+dentifier","messageId":"un
+usedVar","endLine":27,"end
+Column":30}],"suppressedMe
+ssages":[],"errorCount":1,
+"fatalErrorCount":0,"warni
+ngCount":0,"fixableErrorCo
+unt":0,"fixableWarningCoun
+t":0,"source":"'use 
+client';\n\nimport React 
+from 'react';\nimport 
+Link from 
+'next/link';\nimport { 
+usePathname } from 'next/n
+avigation';\nimport 
+KitnLogo from '@/component
+s/ui/KitnLogo';\nimport { 
+\n  LayoutDashboard, \n  
+Terminal, \n  Package, \n 
+ Boxes, \n  BarChart3, \n 
+ TrendingUp, \n  Users, 
+\n  UserCog, \n  
+GitBranch,\n  Settings\n} 
+from 'lucide-react';\n\nin
+terface NavItemProps {\n  
+href: string;\n  icon: 
+React.ReactNode;\n  
+label: string;\n  
+active?: 
+boolean;\n}\n\nconst 
+NavItem = ({ href, icon, 
+label, active }: 
+NavItemProps) => (\n  
+<Link \n    href={href}\n 
+   className={`flex 
+items-center gap-3 px-4 
+py-2.5 mx-2.5 
+rounded-[12px] 
+transition-all 
+duration-300 group ${\n   
+   active \n        ? 
+'bg-brand-green 
+text-white shadow-lg 
+shadow-brand-green/25 
+scale-[1.02]' \n        : 
+'text-gray-400 
+hover:bg-white/5 
+hover:text-white'\n    
+}`}\n  >\n    <div 
+className={`w-1.5 h-1.5 
+rounded-full 
+transition-all 
+duration-300 ${active ? 
+'bg-white scale-125' : 
+'bg-gray-600 group-hover:b
+g-gray-400'}`} />\n    
+<span className=\"text-sm 
+font-bold tracking-tight\"
+>{label}</span>\n    
+{active && (\n      <div 
+className=\"ml-auto w-1 
+h-4 bg-white/20 
+rounded-full 
+animate-pulse\" />\n    
+)}\n  
+</Link>\n);\n\nconst 
+NavGroup = ({ title, 
+children }: { title: 
+string; children: 
+React.ReactNode }) => (\n 
+ <div 
+className=\"mb-6\">\n    
+<p className=\"px-6 
+text-[10px] font-black 
+text-gray-500 uppercase 
+tracking-[0.2em] mb-3 opac
+ity-50\">{title}</p>\n    
+<div className=\"space-y-1
+.5\">\n      {children}\n 
+   </div>\n  
+</div>\n);\n\nexport 
+default function 
+Sidebar({ initials, name 
+}: { initials: string; 
+name: string }) {\n  
+const pathname = 
+usePathname();\n\n  
+return (\n    <aside 
+className=\"w-[220px] 
+bg-[#1A1A2E] flex 
+flex-col flex-shrink-0 
+z-20 shadow-2xl border-r 
+border-white/5\">\n      
+{/* Logo Section */}\n    
+  <div className=\"p-7 
+flex items-center gap-3 
+bg-gradient-to-b 
+from-white/5 
+to-transparent\">\n       
+ <div className=\"p-2 
+bg-white/5 rounded-xl 
+shadow-inner border 
+border-white/5\">\n       
+   <KitnLogo size=\"sm\" 
+/>\n        </div>\n      
+  <div>\n          <span 
+className=\"font-black 
+text-white text-sm 
+tracking-tighter block 
+leading-none\">KiTN 
+POS</span>\n          
+<span 
+className=\"text-[9px] 
+text-brand-green 
+font-bold tracking-widest 
+uppercase 
+mt-0.5\">Premium</span>\n 
+       </div>\n      
+</div>\n\n      {/* 
+Navigation */}\n      
+<nav className=\"flex-1 
+overflow-y-auto py-6 
+scrollbar-hide px-2\">\n  
+      <NavGroup 
+title=\"Operation\">\n    
+      <NavItem 
+href=\"/dashboard\" 
+label=\"Home\" 
+icon={<LayoutDashboard 
+size={18} />} 
+active={pathname === 
+'/dashboard'} />\n        
+  <NavItem href=\"/pos\" 
+label=\"POS Terminal\" 
+icon={<Terminal size={18} 
+/>} active={pathname === 
+'/pos'} />\n          
+<NavItem 
+href=\"/products\" 
+label=\"Products\" 
+icon={<Package size={18} 
+/>} active={pathname === 
+'/products'} />\n         
+ <NavItem 
+href=\"/inventory\" 
+label=\"Inventory\" 
+icon={<Boxes size={18} 
+/>} active={pathname === 
+'/inventory'} />\n        
+</NavGroup>\n\n        
+<NavGroup 
+title=\"Analytics\">\n    
+      <NavItem 
+href=\"/reports/sales\" 
+label=\"Sales Reports\" 
+icon={<BarChart3 
+size={18} />} 
+active={pathname === 
+'/reports/sales'} />\n    
+      <NavItem 
+href=\"/profit\" 
+label=\"Finance\" 
+icon={<TrendingUp 
+size={18} />} 
+active={pathname === 
+'/profit'} />\n          
+<NavItem 
+href=\"/customers\" 
+label=\"Directory\" 
+icon={<Users size={18} 
+/>} active={pathname === 
+'/customers'} />\n        
+</NavGroup>\n\n        
+<NavGroup 
+title=\"System\">\n       
+   <NavItem 
+href=\"/users\" 
+label=\"Team\" 
+icon={<UserCog size={18} 
+/>} active={pathname === 
+'/users'} />\n          
+<NavItem 
+href=\"/branches\" 
+label=\"Outlets\" 
+icon={<GitBranch 
+size={18} />} 
+active={pathname === 
+'/branches'} />\n         
+ <NavItem 
+href=\"/settings\" 
+label=\"Settings\" 
+icon={<Settings size={18} 
+/>} active={pathname === 
+'/settings'} />\n        
+</NavGroup>\n      
+</nav>\n\n      {/* User 
+Footer */}\n      <div 
+className=\"p-5 border-t 
+border-white/5 
+bg-black/20 m-3 
+rounded-2xl 
+transition-all 
+duration-500 
+hover:bg-black/30 group 
+cursor-pointer border 
+border-white/0 
+hover:border-white/5\">\n 
+       <div 
+className=\"flex 
+items-center gap-3\">\n   
+       <div 
+className=\"w-10 h-10 
+rounded-xl bg-brand-green 
+flex items-center 
+justify-center text-white 
+font-black text-sm 
+shadow-lg 
+shadow-brand-green/20 
+group-hover:scale-110 
+transition-transform\">\n 
+           {initials}\n   
+       </div>\n          
+<div className=\"flex-1 
+min-w-0\">\n            
+<p className=\"text-sm 
+font-black text-white 
+truncate\">{name}</p>\n   
+         <p 
+className=\"text-[10px] 
+text-gray-500 font-bold 
+uppercase tracking-widest 
+mt-1\">Administrator</p>\n
+          </div>\n        
+</div>\n      </div>\n    
+</aside>\n  );\n}\n","used
+DeprecatedRules":[]},{"fil
+ePath":"C:\\Users\\Nixon\\
+Documents\\kitn-pos\\apps\
+\web\\lib\\mpesa\\daraja.t
+s","messages":[{"ruleId":"
+@typescript-eslint/no-unus
+ed-vars","severity":2,"mes
+sage":"'crypto' is 
+defined but never used.","
+line":1,"column":8,"nodeTy
+pe":"Identifier","messageI
+d":"unusedVar","endLine":1
+,"endColumn":14,"suggestio
+ns":[{"messageId":"removeU
+nusedImportDeclaration","d
+ata":{"varName":"crypto"},
+"fix":{"range":[0,29],"tex
+t":""},"desc":"Remove 
+unused import declaration.
+"}]}],"suppressedMessages"
+:[],"errorCount":1,"fatalE
+rrorCount":0,"warningCount
+":0,"fixableErrorCount":0,
+"fixableWarningCount":0,"s
+ource":"import crypto 
+from 'crypto';\n\nconst 
+MPESA_CONSUMER_KEY = proce
+ss.env.MPESA_CONSUMER_KEY;
+\nconst 
+MPESA_CONSUMER_SECRET = pr
+ocess.env.MPESA_CONSUMER_S
+ECRET;\nconst 
+MPESA_SHORTCODE = process.
+env.MPESA_SHORTCODE || 
+'174379';\nconst 
+MPESA_PASSKEY = process.en
+v.MPESA_PASSKEY;\nconst 
+MPESA_CALLBACK_URL = proce
+ss.env.MPESA_CALLBACK_URL;
+\nconst MPESA_ENVIRONMENT 
+= process.env.MPESA_ENVIRO
+NMENT || 
+'sandbox';\n\nconst 
+DARAJA_URL = 
+MPESA_ENVIRONMENT === 
+'sandbox' \n  ? 'https://s
+andbox.safaricom.co.ke' 
+\n  : 'https://api.safaric
+om.co.ke';\n\nexport 
+async function 
+getAccessToken() {\n  
+const auth = Buffer.from(`
+${MPESA_CONSUMER_KEY}:${MP
+ESA_CONSUMER_SECRET}`).toS
+tring('base64');\n  \n  
+const response = await fet
+ch(`${DARAJA_URL}/oauth/v1
+/generate?grant_type=clien
+t_credentials`, {\n    
+headers: {\n      
+Authorization: `Basic 
+${auth}`\n    }\n  
+});\n\n  if 
+(!response.ok) {\n    
+const error = await 
+response.text();\n    
+throw new Error(`Failed 
+to get M-Pesa access 
+token: ${error}`);\n  
+}\n\n  const data = await 
+response.json();\n  
+return data.access_token;\
+n}\n\nexport async 
+function stkPush(phone: 
+string, amount: number, 
+reference: string) {\n  
+const token = await 
+getAccessToken();\n  
+const timestamp = new Date
+().toISOString().replace(/
+[-:T.]/g, '').slice(0, 
+14);\n  const password = B
+uffer.from(`${MPESA_SHORTC
+ODE}${MPESA_PASSKEY}${time
+stamp}`).toString('base64'
+);\n\n  const body = {\n  
+  BusinessShortCode: 
+MPESA_SHORTCODE,\n    
+Password: password,\n    
+Timestamp: timestamp,\n   
+ TransactionType: 'Custome
+rPayBillOnline',\n    
+Amount: 
+Math.round(amount),\n    
+PartyA: phone,\n    
+PartyB: 
+MPESA_SHORTCODE,\n    
+PhoneNumber: phone,\n    
+CallBackURL: 
+MPESA_CALLBACK_URL,\n    
+AccountReference: 
+reference,\n    
+TransactionDesc: `Payment 
+for ${reference}`\n  
+};\n\n  const response = 
+await fetch(`${DARAJA_URL}
+/mpesa/stkpush/v1/processr
+equest`, {\n    method: 
+'POST',\n    headers: {\n 
+     Authorization: 
+`Bearer ${token}`,\n      
+'Content-Type': 
+'application/json'\n    
+},\n    body: 
+JSON.stringify(body)\n  
+});\n\n  if 
+(!response.ok) {\n    
+const error = await 
+response.text();\n    
+throw new Error(`M-Pesa 
+STK Push failed: 
+${error}`);\n  }\n\n  
+return await response.json
+();\n}\n","usedDeprecatedR
+ules":[]},{"filePath":"C:\
+\Users\\Nixon\\Documents\\
+kitn-pos\\apps\\web\\lib\\
+offline\\sync.ts","message
+s":[{"ruleId":"@typescript
+-eslint/no-unused-vars","s
+everity":2,"message":"'Sal
+esQueueEntry' is defined 
+but never used.","line":1,
+"column":19,"nodeType":"Id
+entifier","messageId":"unu
+sedVar","endLine":1,"endCo
+lumn":34,"suggestions":[{"
+messageId":"removeUnusedVa
+r","data":{"varName":"Sale
+sQueueEntry"},"fix":{"rang
+e":[11,33],"text":""},"des
+c":"Remove unused 
+variable \"SalesQueueEntry
+\"."}]},{"ruleId":"@typesc
+ript-eslint/no-unused-vars
+","severity":2,"message":"
+'SaleItemsQueueEntry' is 
+defined but never used.","
+line":1,"column":41,"nodeT
+ype":"Identifier","message
+Id":"unusedVar","endLine":
+1,"endColumn":60,"suggesti
+ons":[{"messageId":"remove
+UnusedVar","data":{"varNam
+e":"SaleItemsQueueEntry"},
+"fix":{"range":[33,59],"te
+xt":""},"desc":"Remove 
+unused variable \"SaleItem
+sQueueEntry\"."}]}],"suppr
+essedMessages":[],"errorCo
+unt":2,"fatalErrorCount":0
+,"warningCount":0,"fixable
+ErrorCount":0,"fixableWarn
+ingCount":0,"source":"impo
+rt { db, type 
+SalesQueueEntry, type 
+SaleItemsQueueEntry } 
+from './db';\nimport { 
+createClient } from '@/lib
+/supabase/client';\n\nexpo
+rt async function 
+pushQueue() {\n  const 
+pendingSales = await 
+db.sales_queue\n    
+.where('sync_status')\n   
+ .equals('pending')\n    
+.toArray();\n\n  if 
+(pendingSales.length === 
+0) return;\n\n  const 
+supabase = 
+createClient();\n\n  for 
+(const sale of 
+pendingSales) {\n    try 
+{\n      const items = 
+await 
+db.sale_items_queue\n     
+   
+.where('sale_queue_id')\n 
+       
+.equals(sale.id!)\n       
+ .toArray();\n\n      // 
+Start a \"simulation\" of 
+individual inserts since 
+we don't have a single 
+bulk API yet\n      // In 
+a real app, you'd call a 
+stored procedure or a 
+dedicated sync endpoint\n 
+     const { data: 
+salesData, error: 
+salesError } = await 
+supabase\n        
+.from('sales')\n        
+.insert({\n          
+branch_id: 
+sale.branch_id,\n         
+ cashier_id: 
+sale.cashier_id,\n        
+  receipt_number: 
+sale.receipt_number,\n    
+      total_amount: 
+sale.total_amount,\n      
+    discount: 
+sale.discount,\n          
+tax_amount: 
+sale.tax_amount,\n        
+  payment_method: 
+sale.payment_method,\n    
+      mpesa_ref: 
+sale.mpesa_ref,\n         
+ created_at: 
+sale.created_at\n        
+})\n        .select()\n   
+     .single();\n\n      
+if (salesError) throw 
+salesError;\n\n      
+const itemsToInsert = 
+items.map(item => ({\n    
+    sale_id: 
+salesData.id,\n        
+product_id: 
+item.product_id,\n        
+quantity: 
+item.quantity,\n        
+unit_price: 
+item.unit_price,\n        
+discount: 
+item.discount,\n        
+vat_amount: 
+item.vat_amount\n      
+}));\n\n      const { 
+error: itemsError } = 
+await supabase\n        
+.from('sale_items')\n     
+   .insert(itemsToInsert);
+\n\n      if (itemsError) 
+throw itemsError;\n\n     
+ // Mark as synced\n      
+await db.sales_queue.updat
+e(sale.id!, { 
+sync_status: 'synced' 
+});\n    } catch (error: 
+unknown) {\n      const 
+message = error 
+instanceof Error ? 
+error.message : 'Unknown 
+error';\n      
+console.error(`Failed to 
+sync sale 
+${sale.receipt_number}:`, 
+message);\n      await db.
+sales_queue.update(sale.id
+!, { \n        
+sync_status: 'failed',\n  
+      retry_count: 
+sale.retry_count + 1 \n   
+   });\n    }\n  
+}\n}\n\nexport async 
+function pullProducts() 
+{\n  const supabase = 
+createClient();\n  const 
+{ data: remoteProducts, 
+error } = await 
+supabase\n    
+.from('products')\n    
+.select('*, 
+inventory(*)');\n\n  if 
+(error) throw error;\n\n  
+for (const remote of 
+remoteProducts) {\n    
+const local = await db.pro
+ducts.get(remote.id);\n   
+ \n    if (!local || new 
+Date(remote.updated_at) > 
+new Date(local.local_updat
+ed_at)) {\n      await 
+db.products.put({\n       
+ ...remote,\n        
+local_updated_at: new 
+Date().toISOString()\n    
+  });\n    }\n  
+}\n}\n\nexport function 
+resolveConflict(local: { 
+local_updated_at: string 
+}, remote: { updated_at: 
+string }) {\n  // Simple 
+\"last write wins\" based 
+on remote timestamp\n  
+return new 
+Date(remote.updated_at) > 
+new Date(local.local_updat
+ed_at) ? remote : local;\n
+}\n","usedDeprecatedRules"
+:[]}]
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:
+\Users\Nixon\AppData\Roami
+ng\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: ([  
+  {"filePath":"C...ated   
+ Rules":[]}]:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+
+info  - Need to disable 
+some ESLint rules? Learn 
+more here: https://nextjs.
+org/docs/basic-features/es
+lint#disabling-rules

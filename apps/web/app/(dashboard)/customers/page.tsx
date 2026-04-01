@@ -131,7 +131,7 @@ export default function DirectoryPage() {
   const handleAddEntry = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const entryData: Record<string, string | number | boolean | null> = {};
+    const entryData: Record<string, string> = {};
     formData.forEach((value, key) => {
       entryData[key] = value as string;
     });
@@ -159,7 +159,7 @@ export default function DirectoryPage() {
     }
   };
 
-  const viewPurchaseHistory = async (customer: Customer) => {
+  const viewPurchaseHistory = useCallback(async (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsDetailOpen(true);
     // Fetch from sales table logic here
@@ -173,7 +173,7 @@ export default function DirectoryPage() {
       { id: '1', created_at: new Date().toISOString(), total_amount: 1500, payment_method: 'mpesa', receipt_number: 'RCP-8821' },
       { id: '2', created_at: new Date(Date.now() - 86400000).toISOString(), total_amount: 4200, payment_method: 'cash', receipt_number: 'RCP-7712' }
     ]);
-  };
+  }, [supabase]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
