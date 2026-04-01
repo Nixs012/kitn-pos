@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -13,6 +14,20 @@ interface ModalProps {
 }
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  if (!mounted) return null;
+
   const sizes = {
     sm: 'max-w-md',
     md: 'max-w-xl',
@@ -20,10 +35,10 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) =>
     xl: 'max-w-5xl'
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 overflow-y-auto pt-10 md:pt-20">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -35,11 +50,11 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) =>
 
           {/* Modal Content */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            initial={{ scale: 0.95, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            exit={{ scale: 0.95, opacity: 0, y: 30 }}
             transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
-            className={`w-full ${sizes[size]} bg-white rounded-[32px] shadow-2xl overflow-hidden relative z-10 border border-white/20 my-auto`}
+            className={`w-full ${sizes[size]} bg-white rounded-[32px] shadow-2xl overflow-hidden relative z-10 border border-white/20 mb-20`}
           >
             {/* Header */}
             <div className="px-10 py-8 border-b border-gray-50 flex items-center justify-between bg-gradient-to-r from-gray-50/50 to-transparent">
@@ -64,6 +79,8 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalProps) =>
       )}
     </AnimatePresence>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default Modal;
