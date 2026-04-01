@@ -260,7 +260,18 @@ export default function ProductsPage() {
           <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mt-1">Manage your inventory items</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
+          <input 
+            type="file" 
+            id="csv-import" 
+            className="hidden" 
+            accept=".csv" 
+            onChange={(e) => {
+              if (e.target.files?.[0]) {
+                toast.info(`Parsing ${e.target.files[0].name}... CRUD import logic coming soon.`);
+              }
+            }} 
+          />
+          <Button variant="outline" className="gap-2" onClick={() => document.getElementById('csv-import')?.click()}>
             <Download size={16} /> Import CSV
           </Button>
           <Button onClick={() => setIsAddModalOpen(true)} className="gap-2">
@@ -304,10 +315,10 @@ export default function ProductsPage() {
           
           let stockVariant: 'success' | 'danger' | 'warning' | 'info' | 'gray' | 'purple' | 'brand' = 'success';
           let stockLabel = 'In Stock';
-          if (stock <= 0) {
+          if (stock === 0) {
             stockVariant = 'danger';
             stockLabel = 'Out of Stock';
-          } else if (stock <= reorder) {
+          } else if (stock < reorder) {
             stockVariant = 'warning';
             stockLabel = 'Low Stock';
           }
