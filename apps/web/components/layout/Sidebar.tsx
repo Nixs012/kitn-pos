@@ -164,14 +164,15 @@ export default function Sidebar() {
       {/* User Card & Popup Menu */}
       <div className="p-4 relative" ref={menuRef}>
         {/* Popup Menu (Above the card) */}
-        {isMenuOpen && userData && (
+        {isMenuOpen && (
           <div 
-            className="absolute bottom-full left-4 bg-[#1E2235] border-[0.5px] border-white/10 rounded-2xl shadow-2xl py-3 w-[calc(100%-32px)] mb-3 animate-in fade-in slide-in-from-bottom-4 duration-300 z-50 overflow-hidden"
+            className="absolute bottom-[calc(100%-8px)] left-4 bg-[#1E2235] border-[0.5px] border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-3 w-[calc(100%-32px)] mb-3 animate-in fade-in slide-in-from-bottom-2 duration-200 z-[100] overflow-hidden"
+            style={{ backdropFilter: 'blur(10px)' }}
           >
             {/* Header */}
             <div className="px-5 py-3 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-[11px] font-black shrink-0 relative overflow-hidden">
-                {userData.avatarUrl ? (
+                {userData?.avatarUrl ? (
                   <Image 
                     src={userData.avatarUrl} 
                     alt="Avatar" 
@@ -179,11 +180,11 @@ export default function Sidebar() {
                     className="object-cover" 
                     unoptimized 
                   />
-                ) : userData.initials}
+                ) : userData?.initials || 'U'}
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-black text-white truncate">{userData.fullName}</p>
-                <p className="text-[10px] text-gray-500 font-bold truncate">{userData.email}</p>
+                <p className="text-[12px] font-black text-white truncate">{userData?.fullName || 'User'}</p>
+                <p className="text-[10px] text-gray-500 font-bold truncate">{userData?.email || 'Loading...'}</p>
               </div>
             </div>
 
@@ -194,18 +195,18 @@ export default function Sidebar() {
               <Link 
                 href="/dashboard/profile"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-white hover:bg-brand-green transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-white hover:bg-brand-green transition-colors group"
               >
-                <span className="text-base">👤</span>
+                <span className="text-base group-hover:scale-110 transition-transform">👤</span>
                 <span className="font-bold">My Profile</span>
               </Link>
 
               <Link 
                 href="/dashboard/settings"
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-white hover:bg-brand-green transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-white hover:bg-brand-green transition-colors group"
               >
-                <span className="text-base">⚙️</span>
+                <span className="text-base group-hover:scale-110 transition-transform">⚙️</span>
                 <span className="font-bold">Settings</span>
               </Link>
 
@@ -213,9 +214,9 @@ export default function Sidebar() {
 
               <button 
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-[#E24B4A] hover:bg-white/5 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-[#E24B4A] hover:bg-red-500/10 transition-colors group"
               >
-                <span className="text-base">🔴</span>
+                <span className="text-base group-hover:scale-110 transition-transform">🔴</span>
                 <span className="font-bold">Sign Out</span>
               </button>
             </div>
@@ -225,7 +226,7 @@ export default function Sidebar() {
         {/* User Card Trigger */}
         <div 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${isMenuOpen ? 'bg-white/5' : 'hover:bg-white/5'}`}
+          className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${isMenuOpen ? 'bg-white/5 ring-1 ring-white/10' : 'hover:bg-white/5'}`}
         >
           <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-lg shadow-brand-green/10 relative overflow-hidden">
             {userData?.avatarUrl ? (
@@ -241,14 +242,14 @@ export default function Sidebar() {
           <div className="flex-1 min-w-0">
             <p className="text-[12px] font-bold text-white truncate">{userData?.fullName || 'Loading...'}</p>
             <div 
-              className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white"
+              className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white transition-colors"
               style={{ backgroundColor: roleColor }}
             >
-              {userData?.role || 'User'}
+              {userData?.role || 'USER'}
             </div>
           </div>
-          <div className={`transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`}>
-            <ChevronUp size={14} className="text-gray-500" />
+          <div className={`transition-transform duration-500 ${isMenuOpen ? 'rotate-180' : ''}`}>
+            <ChevronUp size={14} className={isMenuOpen ? 'text-brand-green' : 'text-gray-500'} />
           </div>
         </div>
       </div>
