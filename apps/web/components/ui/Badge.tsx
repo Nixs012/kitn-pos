@@ -4,9 +4,10 @@ interface BadgeProps {
   children: React.ReactNode;
   variant?: 'success' | 'warning' | 'danger' | 'info' | 'gray' | 'purple';
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const Badge = ({ children, variant = 'info', className = '' }: BadgeProps) => {
+const Badge = ({ children, variant = 'info', className = '', style }: BadgeProps) => {
   const styles = {
     success: "bg-green-100 text-green-700 border-green-200",
     warning: "bg-amber-100 text-amber-700 border-amber-200",
@@ -17,7 +18,10 @@ const Badge = ({ children, variant = 'info', className = '' }: BadgeProps) => {
   };
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 ${styles[variant]} ${className}`}>
+    <span 
+      className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 ${styles[variant]} ${className}`}
+      style={style}
+    >
       <div className={`w-1 h-1 rounded-full ${
         variant === 'success' ? 'bg-green-500' : 
         variant === 'warning' ? 'bg-amber-500' : 

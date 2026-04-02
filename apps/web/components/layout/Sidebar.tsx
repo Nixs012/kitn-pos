@@ -1,9 +1,8 @@
-'use client';
-
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import KitnLogo from '@/components/ui/KitnLogo';
+import { createClient } from '@/lib/supabase/client';
 import { 
   LayoutDashboard, 
   Terminal, 
@@ -14,7 +13,10 @@ import {
   Users, 
   UserCog, 
   GitBranch,
-  Settings
+  Settings,
+  User,
+  LogOut,
+  ChevronUp
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -52,6 +54,26 @@ const NavGroup = ({ title, children }: { title: string; children: React.ReactNod
 
 export default function Sidebar({ initials, name }: { initials: string; name: string }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <aside className="w-[220px] bg-[#1A1A2E] flex flex-col flex-shrink-0 z-20 shadow-2xl border-r border-white/5">
@@ -88,9 +110,41 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
         </NavGroup>
       </nav>
 
-      {/* User Footer */}
-      <div className="p-5 border-t border-white/5 bg-black/20 m-3 rounded-2xl transition-all duration-500 hover:bg-black/30 group cursor-pointer border border-white/0 hover:border-white/5">
-        <div className="flex items-center gap-3">
+      {/* User Footer with Dropdown */}
+      <div className="relative p-5 border-t border-white/5 bg-black/20 m-3 rounded-2xl border border-white/0 hover:border-white/5" ref={menuRef}>
+        {isMenuOpen && (
+          <div className="absolute bottom-full left-0 w-full mb-2 bg-[#1f1f3a] border border-white/10 rounded-2xl shadow-2xl py-2 animate-in slide-in-from-bottom-2 duration-300 z-30">
+            <Link 
+              href="/dashboard/profile" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-xs font-black text-gray-400 hover:text-white hover:bg-white/5 transition-all mx-2 rounded-xl"
+            >
+              <User size={14} className="text-brand-green" />
+              My Profile
+            </Link>
+            <Link 
+              href="/dashboard/settings" 
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-xs font-black text-gray-400 hover:text-white hover:bg-white/5 transition-all mx-2 rounded-xl"
+            >
+              <Settings size={14} className="text-brand-blue" />
+              Settings
+            </Link>
+            <div className="my-2 h-[1px] bg-white/5 mx-4" />
+            <button 
+              onClick={handleSignOut}
+              className="w-[calc(100%-16px)] flex items-center gap-3 px-4 py-2.5 text-xs font-black text-brand-coral hover:bg-brand-coral/10 transition-all mx-2 rounded-xl"
+            >
+              <LogOut size={14} />
+              Sign Out
+            </button>
+          </div>
+        )}
+        
+        <div 
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
           <div className="w-10 h-10 rounded-xl bg-brand-green flex items-center justify-center text-white font-black text-sm shadow-lg shadow-brand-green/20 group-hover:scale-110 transition-transform">
             {initials}
           </div>
@@ -98,6 +152,7 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
             <p className="text-sm font-black text-white truncate">{name}</p>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Administrator</p>
           </div>
+          <ChevronUp size={14} className={`text-gray-500 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
     </aside>
