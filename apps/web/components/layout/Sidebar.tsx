@@ -19,6 +19,7 @@ import {
   Settings,
   ChevronUp
 } from 'lucide-react';
+import { useUserStore } from '@/stores/userStore';
 
 interface NavItemProps {
   href: string;
@@ -58,57 +59,18 @@ export default function Sidebar() {
   const router = useRouter();
   const supabase = createClient();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [userData, setUserData] = useState<{
-    fullName: string;
-    email: string;
-    role: string;
-    initials: string;
-    avatarUrl?: string;
-  } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Get data from global store (instant)
+  const { user, profile } = useUserStore();
+
+  const fallbackName = user?.email?.split('@')[0] || 'User';
+  const fullName = profile?.full_name || fallbackName;
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
+    : fallbackName[0].toUpperCase();
+
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('full_name, role, avatar_url')
-            .eq('id', user.id)
-            .single();
-
-          const fallbackName = user.email?.split('@')[0] || 'User';
-          
-          if (profile) {
-            const initials = profile.full_name
-              ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
-              : fallbackName[0].toUpperCase();
-            
-            setUserData({
-              fullName: profile.full_name || fallbackName,
-              email: user.email || '',
-              role: profile.role || 'Member',
-              initials,
-              avatarUrl: profile.avatar_url,
-            });
-          } else {
-            // Fallback for logged in users without a profile yet
-            setUserData({
-              fullName: fallbackName,
-              email: user.email || '',
-              role: 'Member',
-              initials: fallbackName[0].toUpperCase(),
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      }
-    };
-
-    fetchUserData();
-
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
@@ -116,15 +78,13 @@ export default function Sidebar() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [supabase]);
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/login');
     router.refresh();
   };
-
-  const roleColor = userData?.role === 'admin' ? '#D85A30' : userData?.role === 'manager' ? '#378ADD' : '#1D9E75';
 
   return (
     <aside className="w-[220px] bg-[#1A1A2E] flex flex-col flex-shrink-0 z-20 shadow-2xl border-r border-white/5">
@@ -172,19 +132,19 @@ export default function Sidebar() {
             {/* Header */}
             <div className="px-5 py-3 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-[11px] font-black shrink-0 relative overflow-hidden">
-                {userData?.avatarUrl ? (
+                {profile?.avatar_url ? (
                   <Image 
-                    src={userData.avatarUrl} 
+                    src={profile.avatar_url} 
                     alt="Avatar" 
                     fill 
                     className="object-cover" 
                     unoptimized 
                   />
-                ) : userData?.initials || 'U'}
+                ) : initials}
               </div>
               <div className="min-w-0">
-                <p className="text-[12px] font-black text-white truncate">{userData?.fullName || 'User'}</p>
-                <p className="text-[10px] text-gray-500 font-bold truncate">{userData?.email || 'Loading...'}</p>
+                <p className="text-[12px] font-black text-white truncate">{fullName}</p>
+                <p className="text-[10px] text-gray-500 font-bold truncate">{user?.email || 'User Session'}</p>
               </div>
             </div>
 
@@ -229,23 +189,23 @@ export default function Sidebar() {
           className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${isMenuOpen ? 'bg-white/5 ring-1 ring-white/10' : 'hover:bg-white/5'}`}
         >
           <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-lg shadow-brand-green/10 relative overflow-hidden">
-            {userData?.avatarUrl ? (
+            {profile?.avatar_url ? (
               <Image 
-                src={userData.avatarUrl} 
+                src={profile.avatar_url} 
                 alt="Avatar" 
                 fill 
                 className="object-cover" 
                 unoptimized 
               />
-            ) : userData?.initials || 'U'}
+            ) : initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-bold text-white truncate">{userData?.fullName || 'Loading...'}</p>
+            <p className="text-[12px] font-bold text-white truncate">{fullName}</p>
             <div 
               className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white transition-colors"
-              style={{ backgroundColor: roleColor }}
+              style={{ backgroundColor: profile?.role === 'admin' ? '#D85A30' : profile?.role === 'manager' ? '#378ADD' : '#1D9E75' }}
             >
-              {userData?.role || 'USER'}
+              {profile?.role || 'MEMBER'}
             </div>
           </div>
           <div className={`transition-transform duration-500 ${isMenuOpen ? 'rotate-180' : ''}`}>

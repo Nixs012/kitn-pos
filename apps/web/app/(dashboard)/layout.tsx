@@ -6,6 +6,7 @@ import PageTransition from '@/components/layout/PageTransition';
 import NavigationProgress from '@/components/layout/NavigationProgress';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import KitnLogo from '@/components/ui/KitnLogo';
+import { UserHydrator } from '@/components/auth/UserHydrator';
 
 export default async function DashboardLayout({
   children,
@@ -13,7 +14,17 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  
+  // Parallel fetch for speed
+  const [userRes, profileRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getUser().then(({ data: { user } }) => 
+      user ? supabase.from('user_profiles').select('*').eq('id', user.id).single() : null
+    )
+  ]);
+
+  const user = userRes.data.user;
+  const profile = profileRes?.data;
 
   if (!user) {
     redirect('/login');
@@ -31,6 +42,8 @@ export default async function DashboardLayout({
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
+
+      <UserHydrator user={user} profile={profile} />
 
       <Sidebar />
 
