@@ -10,10 +10,19 @@ export interface CartItem {
   unit: string;
 }
 
+export interface CartProduct {
+  id: string;
+  name: string;
+  selling_price?: number | string;
+  vat_rate?: number | string;
+  unit?: string;
+  [key: string]: any;
+}
+
 interface CartStore {
   items: CartItem[];
   discount: number;
-  addItem: (product: any) => void;
+  addItem: (product: CartProduct) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   setDiscount: (amount: number) => void;
