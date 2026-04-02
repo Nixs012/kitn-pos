@@ -21,9 +21,56 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
 
+// --- Types ---
+
+interface Inventory {
+  quantity: number;
+  reorder_level: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  selling_price: number;
+  unit?: string;
+  category: string;
+  reorder_level?: number;
+  inventory?: Inventory[];
+  vat_rate: number;
+  barcode: string | null;
+  [key: string]: unknown;
+}
+
+interface SaleItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  unit?: string;
+  vat_rate: number;
+}
+
+interface UserProfile {
+  id: string;
+  tenant_id: string;
+  branch_id: string;
+  role: string;
+  full_name: string;
+}
+
+interface Sale {
+  id: string;
+  receipt_number: string;
+  total_amount: number;
+  discount?: number;
+  tax_amount?: number;
+  payment_method: string;
+  created_at: string;
+}
+
 // --- Components ---
 
-const ProductCard = ({ product, onAdd }: { product: { id: string; name: string; inventory: Array<{ quantity: number }>; selling_price: number; unit?: string; reorder_level?: number }, onAdd: (p: { id: string; name: string; price: number; quantity: number; vat_rate: number }) => void }) => {
+const ProductCard = ({ product, onAdd }: { product: Product, onAdd: (p: Product) => void }) => {
   const stock = Number(product.inventory?.[0]?.quantity ?? 0);
   const isOutOfStock = stock <= 0;
   const isLowStock = stock > 0 && stock <= (product.reorder_level ?? 10);
@@ -31,13 +78,7 @@ const ProductCard = ({ product, onAdd }: { product: { id: string; name: string; 
 
   const handleClick = () => {
     if (isOutOfStock) return;
-    onAdd({
-      id: product.id,
-      name: product.name,
-      price: product.selling_price,
-      quantity: 1,
-      vat_rate: 16 // Default VAT for now
-    });
+    onAdd(product);
     setIsFlash(true);
     setTimeout(() => setIsFlash(false), 200);
   };
@@ -88,57 +129,51 @@ export default function PosPage() {
   const supabase = createClient();
   const { items, addItem, updateQuantity, removeItem, clearCart, getTotals, discount, setDiscount } = useCartStore();
   
-  const [products, setProducts] = useState<Array<{ 
-    id: string; 
-    name: string; 
-    selling_price: number; 
-    inventory: Array<{ quantity: number }>; 
-    unit?: string; 
-    reorder_level?: number; 
-    category?: string; 
-    barcode?: string 
-  }>>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [cashierName, setCashierName] = useState('Cashier');
-  const [branchId, setBranchId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   
   // Payment States
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [isMpesaModalOpen, setIsMpesaModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-  const [lastSale, setLastSale] = useState<{ receipt_number: string; created_at: string; payment_method: string; total_amount: number; discount: number; items: Array<{ id: string; name: string; quantity: number; unit?: string; price: number }> } | null>(null);
+  const [lastSale, setLastSale] = useState<(Sale & { items: SaleItem[] }) | null>(null);
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // M-Pesa Integration States
+  const [mpesaPhone, setMpesaPhone] = useState('');
+  const [isWaitingForMpesa, setIsWaitingForMpesa] = useState(false);
+
   const fetchInitialData = useCallback(async () => {
-    setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('full_name, branch_id, tenant_id')
+        .select('*')
         .eq('id', user.id)
         .single();
-      
-      if (profile) {
-        setCashierName(profile.full_name || 'Cashier');
-        setBranchId(profile.branch_id);
-        
-        const { data: productsData } = await supabase
-          .from('products')
-          .select('*, inventory(*)')
-          .eq('tenant_id', profile.tenant_id)
-          .eq('is_active', true);
-        
-        if (productsData) setProducts(productsData);
-      }
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+      setCashierName(profileData.full_name || 'Cashier');
+
+      // Fetch products for this tenant
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*, inventory(quantity, reorder_level)')
+        .eq('tenant_id', profileData.tenant_id)
+        .eq('is_active', true);
+
+      if (productsError) throw productsError;
+      setProducts(productsData || []);
     } catch (err: unknown) {
-      console.error('POS Initial Data Error:', err);
-      toast.error('Failed to load products');
+      console.error('Initial Data Error:', err);
     } finally {
       setLoading(false);
     }
@@ -150,12 +185,15 @@ export default function PosPage() {
 
   const totals = getTotals();
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.barcode && p.barcode.includes(search));
+    const s = search.toLowerCase();
+    const matchesSearch = p.name.toLowerCase().includes(s) || 
+                          (p.barcode?.toLowerCase()?.includes(s) ?? false) ||
+                          (p.id.toLowerCase().includes(s));
     const matchesCategory = category === 'All' || p.category === category;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category).filter((c): c is string => !!c)))];
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
   const handleCharge = async (method: 'cash' | 'mpesa' | 'card') => {
     if (items.length === 0) return;
@@ -170,34 +208,42 @@ export default function PosPage() {
     }
   };
 
-  const completeSale = async (method: 'cash' | 'mpesa' | 'card') => {
-    if (!branchId || isProcessing) return;
-    setIsProcessing(true);
+  const completeSale = async (method: 'cash' | 'mpesa' | 'card' = 'cash', mpesaRef?: string) => {
+    if (items.length === 0) {
+      toast.error('Cart is empty');
+      return null;
+    }
+
     try {
+      setIsProcessing(true);
       const { data: { user } } = await supabase.auth.getUser();
-      const receiptNum = `RCP-${Date.now()}`;
-      
-      // 1. Create Sale entry
+      const branchId = profile?.branch_id;
+      const tenantId = profile?.tenant_id;
+
+      if (!branchId || !tenantId) throw new Error('User profile not loaded');
+
+      const receiptNumber = `RCPT-${Date.now().toString().slice(-8)}`;
+
+      // 1. Create Sale
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .insert({
           branch_id: branchId,
           cashier_id: user?.id,
-          receipt_number: receiptNum,
+          receipt_number: receiptNumber,
           total_amount: totals.total,
           discount: discount,
           tax_amount: totals.vat,
           payment_method: method,
-          created_at: new Date().toISOString()
+          mpesa_ref: mpesaRef || null
         })
         .select()
         .single();
 
       if (saleError) throw saleError;
 
-      // 2. Create Sale Items & Update Inventory
+      // 2. Insert Sale Items
       for (const item of items) {
-        // Add sale item
         await supabase.from('sale_items').insert({
           sale_id: sale.id,
           product_id: item.id,
@@ -228,15 +274,65 @@ export default function PosPage() {
       setLastSale({ ...sale, items });
       setIsCashModalOpen(false);
       setIsMpesaModalOpen(false);
+      setIsWaitingForMpesa(false);
       setIsReceiptModalOpen(true);
       clearCart();
+      setDiscount(0);
       toast.success('Sale completed successfully!');
-      fetchInitialData(); // Refresh stock
+      fetchInitialData();
+      return sale;
     } catch (err: unknown) {
       console.error('Checkout Error:', err);
-      toast.error('Failed to complete sale');
+      const message = err instanceof Error ? err.message : 'Failed to complete sale';
+      toast.error(message);
+      return null;
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleMpesaPush = async () => {
+    if (!mpesaPhone || !totals.total) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+
+    if (!/^(07|01|2547|2541|\+2547|\+2541)\d{8}$/.test(mpesaPhone)) {
+      toast.error('Invalid phone number format');
+      return;
+    }
+
+    try {
+      setIsWaitingForMpesa(true);
+      
+      // 1. Create sale record first (pending state)
+      const sale = await completeSale('mpesa', 'PENDING');
+      if (!sale) throw new Error('Failed to create sale session');
+
+      // 2. Trigger STK push with saleId
+      const res = await fetch('/api/mpesa/stk-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: mpesaPhone,
+          amount: totals.total,
+          saleId: sale.id,
+          reference: `SALE-${sale.receipt_number}`
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      toast.success('STK Push sent! Please enter your PIN on your phone.');
+      
+      // The callback (on the server) will update the mpesa_ref when it arrives.
+      // We don't need a timeout anymore. The sale record is already there.
+
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'M-Pesa push failed';
+      toast.error(message);
+      setIsWaitingForMpesa(false);
     }
   };
 
@@ -278,7 +374,9 @@ export default function PosPage() {
               <button 
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${category === cat ? 'bg-brand-dark text-white shadow-xl' : 'text-gray-400 hover:text-brand-dark'}`}
+                className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  category === cat ? 'bg-brand-green text-white shadow-lg shadow-brand-green/20' : 'bg-white text-gray-400 hover:text-brand-dark'
+                }`}
               >
                 {cat}
               </button>
@@ -287,206 +385,130 @@ export default function PosPage() {
         </div>
 
         {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+        <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
             {filteredProducts.map(product => (
               <ProductCard key={product.id} product={product} onAdd={addItem} />
             ))}
-            {filteredProducts.length === 0 && (
-              <div className="col-span-full py-40 text-center space-y-4">
-                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto text-gray-200 shadow-inner">
-                  <Search size={48} />
-                </div>
-                <div>
-                  <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No products found</p>
-                  <p className="text-gray-300 text-[10px] mt-1 italic">Try a different search term or category</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Right Column: Checkout */}
-      <div className="w-[320px] bg-brand-dark rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-white/5 relative">
-        <div className="p-8 bg-[#1f1f3a]/30 border-b border-white/5">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <p className="text-[10px] font-black text-brand-green uppercase tracking-widest mb-1 leading-none">ORDER LOG</p>
-              <h2 className="text-2xl font-black text-white tracking-tighter leading-none">Checkout</h2>
-            </div>
-            <div className="bg-white/10 p-2.5 rounded-2xl">
-              <ShoppingCart size={20} className="text-white" />
-            </div>
-          </div>
-          <div className="bg-white/5 p-4 rounded-3xl flex items-center gap-4 border border-white/5">
-            <div className="w-10 h-10 rounded-2xl bg-brand-green/20 flex items-center justify-center text-brand-green font-black shadow-lg shadow-brand-green/10">
-              {cashierName[0]}
-            </div>
-            <div>
-              <p className="text-xs font-black text-white">{cashierName}</p>
-              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 opacity-60">Admin Server</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Cart List */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
-          {items.map(item => (
-            <div key={item.id} className="bg-white/5 p-4 rounded-[28px] border border-white/0 hover:border-white/10 transition-all group">
-              <div className="flex justify-between items-start mb-3">
-                <p className="text-xs font-black text-white leading-tight line-clamp-2 pr-4">{item.name}</p>
-                <button 
-                  onClick={() => removeItem(item.id)}
-                  className="p-1.5 text-gray-500 hover:text-brand-coral transition-colors"
-                >
-                  <X size={14} />
-                </button>
+      {/* Right Column: Checkout Terminal */}
+      <div className="w-full lg:w-[400px] flex flex-col gap-4">
+        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm flex-1 flex flex-col overflow-hidden">
+          <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green">
+                <ShoppingCart size={20} />
               </div>
-              <div className="flex justify-between items-center mt-auto">
-                <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-2xl border border-white/5">
-                  <button 
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-brand-green text-gray-400"
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span className="text-xs font-black w-6 text-center text-white">{item.quantity}</span>
-                  <button 
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 hover:text-brand-green text-gray-400"
-                  >
-                    <Plus size={14} />
-                  </button>
+              <div>
+                <h2 className="text-lg font-black text-brand-dark tracking-tighter">Current Order</h2>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{items.length} Items Selected</p>
+              </div>
+            </div>
+            <button onClick={() => clearCart()} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
+            {items.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale p-10">
+                <ShoppingCart size={64} className="mb-4" />
+                <p className="text-sm font-bold text-brand-dark uppercase tracking-widest">Cart is Empty</p>
+              </div>
+            ) : (
+              items.map(item => (
+                <div key={item.id} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-50 animate-in slide-in-from-right-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-brand-dark text-sm truncate">{item.name}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.price.toLocaleString()} KES</p>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl shadow-sm border border-gray-100">
+                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 text-gray-400 hover:text-brand-green"><Minus size={14} /></button>
+                    <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 text-gray-400 hover:text-brand-green"><Plus size={14} /></button>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-brand-dark">{(item.price * item.quantity).toLocaleString()}</p>
+                    <button onClick={() => removeItem(item.id)} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase">Remove</button>
+                  </div>
                 </div>
-                <p className="text-sm font-black text-brand-green">
-                  {(item.price * item.quantity).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          ))}
-          {items.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center px-10 py-10 opacity-30 select-none">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                <ShoppingCart size={32} />
-              </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] leading-relaxed text-white">Tap a product to start your order</p>
-            </div>
-          )}
-        </div>
+              ))
+            )}
+          </div>
 
-        {/* Totals & Payment */}
-        <div className="p-8 space-y-6 bg-[#1f1f3a]/40 border-t border-white/5">
-          <div className="space-y-3">
-            <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-widest">
-              <span>Subtotal</span>
-              <span className="text-white/80">{totals.subtotal.toLocaleString()} KES</span>
-            </div>
-            <div className="flex justify-between text-[10px] font-black text-gray-500 uppercase tracking-widest">
-              <span>VAT (16%)</span>
-              <span className="text-white/80">{Math.round(totals.vat).toLocaleString()} KES</span>
-            </div>
-            <div className="flex justify-between items-center text-[10px] font-black text-gray-500 uppercase tracking-widest">
-              <span>Discount</span>
-              <div className="flex items-center gap-2">
-                <span className="text-brand-coral">KES</span>
-                <input 
-                  type="number" 
-                  className="bg-white/10 w-16 px-2 py-1 rounded-lg text-white font-black text-right border-none focus:ring-1 focus:ring-brand-coral outline-none" 
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                />
+          <div className="p-6 bg-gray-50/50 border-t border-gray-100 space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <span>Subtotal</span>
+                <span>{totals.subtotal.toLocaleString()} KES</span>
               </div>
+              <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <span>VAT (16%)</span>
+                <span>{totals.vat.toLocaleString()} KES</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-xs font-bold text-brand-coral uppercase tracking-widest">
+                  <span>Discount</span>
+                  <span>-{discount.toLocaleString()} KES</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="pt-4 border-t border-gray-200 flex justify-between items-end">
+              <span className="text-sm font-black text-brand-dark uppercase tracking-tighter">Total Payable</span>
+              <span className="text-3xl font-black text-brand-green tracking-tighter">
+                <span className="text-xs text-gray-400 mr-2 uppercase">KES</span>
+                {totals.total.toLocaleString()}
+              </span>
             </div>
           </div>
           
-          <div className="pt-6 border-t border-white/10">
-            <div className="flex justify-between items-end mb-6">
-              <span className="text-[11px] font-black tracking-[0.2em] text-gray-500 uppercase">Amount Due</span>
-              <span className="text-4xl font-black text-brand-green tracking-tighter leading-none">
-                {Math.round(totals.total).toLocaleString()}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <button 
-                onClick={() => handleCharge('mpesa')}
-                disabled={items.length === 0}
-                className="w-full bg-[#1D9E75] hover:bg-[#188c67] disabled:opacity-20 text-white font-black py-5 rounded-3xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-green-950/40 uppercase tracking-widest text-xs"
-              >
-                <Smartphone size={18} /> Pay with M-Pesa
-              </button>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <button 
-                  onClick={() => handleCharge('cash')}
-                  disabled={items.length === 0}
-                  className="bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white font-black py-4 rounded-[22px] flex items-center justify-center gap-2 transition-all border border-white/5"
-                >
-                  <Banknote size={16} className="text-blue-400" />
-                  <span className="text-[10px] uppercase tracking-widest">Cash</span>
-                </button>
-                <button 
-                  onClick={() => handleCharge('card')}
-                  disabled={items.length === 0}
-                  className="bg-white/5 hover:bg-white/10 disabled:opacity-20 text-white font-black py-4 rounded-[22px] flex items-center justify-center gap-2 transition-all border border-white/5"
-                >
-                  <CreditCard size={16} className="text-brand-purple" />
-                  <span className="text-[10px] uppercase tracking-widest">Card</span>
-                </button>
-              </div>
-
-              <button 
-                onClick={() => handleCharge('cash')}
-                disabled={items.length === 0 || isProcessing}
-                className="w-full bg-[#D85A30] hover:bg-[#c44f2a] disabled:opacity-20 text-white py-5 rounded-3xl font-black text-sm uppercase tracking-[0.2em] transition-all shadow-2xl shadow-orange-950/40 mt-2 flex items-center justify-center gap-2"
-              >
-                {isProcessing ? <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin rounded-full" /> : `Charge KES ${Math.round(totals.total).toLocaleString()}`}
-              </button>
-            </div>
-
-            <button 
-              onClick={clearCart}
-              className="w-full text-brand-coral hover:text-red-400 text-[10px] font-black uppercase tracking-[0.3em] mt-8 transition-colors active:scale-95"
-            >
-              Clear Current Order
+          <div className="p-6 grid grid-cols-3 gap-3">
+            <button onClick={() => handleCharge('cash')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-blue/10 hover:text-brand-blue transition-all group">
+              <Banknote size={20} className="group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
+            </button>
+            <button onClick={() => handleCharge('mpesa')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-green/10 hover:text-brand-green transition-all group">
+              <Smartphone size={20} className="group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest">M-Pesa</span>
+            </button>
+            <button onClick={() => handleCharge('card')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-purple-100 hover:text-purple-600 transition-all group">
+              <CreditCard size={20} className="group-hover:scale-110 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Card</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Cash Payment Modal */}
+      {/* Cash Modal */}
       <Modal isOpen={isCashModalOpen} onClose={() => setIsCashModalOpen(false)} title="Cash Payment" size="sm">
         <div className="space-y-6">
-          <div className="bg-brand-dark p-6 rounded-3xl border border-white/5">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Due</p>
-            <p className="text-4xl font-black text-brand-green tracking-tighter">KES {Math.round(totals.total).toLocaleString()}</p>
+          <div className="p-6 bg-brand-green/5 rounded-3xl border border-brand-green/10 text-center">
+            <p className="text-[10px] font-black text-brand-green uppercase tracking-widest mb-1">Amount Due</p>
+            <h3 className="text-3xl font-black text-brand-dark">{totals.total.toLocaleString()} <span className="text-xs text-gray-400">KES</span></h3>
           </div>
           
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Cash Received</label>
               <input 
                 type="number"
+                className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 text-xl font-black text-brand-dark focus:ring-4 focus:ring-brand-green/10 transition-all"
                 value={cashReceived}
                 onChange={(e) => setCashReceived(Number(e.target.value))}
-                className="w-full bg-gray-50 border-gray-100 rounded-[22px] px-6 py-5 text-2xl font-black focus:ring-2 focus:ring-brand-green/20 outline-none mt-2"
                 autoFocus
               />
             </div>
-
-            <div className={`p-6 rounded-[24px] flex flex-col items-center justify-center border-2 border-dashed ${cashReceived >= totals.total ? 'bg-green-50/50 border-brand-green/20' : 'bg-red-50/50 border-brand-coral/20'}`}>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Your Change</p>
-              <p className={`text-4xl font-black tracking-tighter ${cashReceived >= totals.total ? 'text-brand-green' : 'text-brand-coral opacity-50'}`}>
-                KES {Math.max(0, cashReceived - Math.round(totals.total)).toLocaleString()}
-              </p>
+            
+            <div className="p-6 bg-gray-100 rounded-2xl flex justify-between items-center">
+              <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Change Return</span>
+              <span className="text-2xl font-black text-brand-coral">{Math.max(0, cashReceived - totals.total).toLocaleString()} KES</span>
             </div>
-
-            <Button 
-              onClick={() => completeSale('cash')} 
-              disabled={cashReceived < totals.total || isProcessing}
-              className="w-full py-5 rounded-[26px] shadow-xl shadow-brand-green/20"
-            >
+            
+            <Button onClick={() => completeSale('cash')} className="w-full py-5 rounded-[26px] text-lg shadow-xl shadow-brand-green/10" disabled={cashReceived < totals.total || isProcessing}>
               {isProcessing ? 'Completing...' : 'Complete Sale'}
             </Button>
           </div>
@@ -494,21 +516,68 @@ export default function PosPage() {
       </Modal>
 
       {/* M-Pesa Modal */}
-      <Modal isOpen={isMpesaModalOpen} onClose={() => setIsMpesaModalOpen(false)} title="M-Pesa Payment" size="sm">
+      <Modal 
+        isOpen={isMpesaModalOpen} 
+        onClose={() => !isWaitingForMpesa && setIsMpesaModalOpen(false)} 
+        title="M-Pesa STK Push" 
+        size="sm"
+      >
         <div className="space-y-8 text-center py-6">
-          <div className="w-24 h-24 bg-brand-green/10 rounded-full flex items-center justify-center mx-auto mb-4 text-brand-green">
+          <div className="w-24 h-24 bg-brand-green/10 rounded-full flex items-center justify-center mx-auto mb-4 text-brand-green relative">
             <Smartphone size={48} />
+            {isWaitingForMpesa && (
+              <div className="absolute inset-0 border-4 border-t-brand-green border-brand-green/10 rounded-full animate-spin" />
+            )}
           </div>
+          
           <div>
-            <h4 className="text-xl font-black text-brand-dark tracking-tighter">M-Pesa Integration</h4>
-            <p className="text-xs text-gray-500 font-medium mt-3 leading-relaxed px-8">STK push integration and automated confirmation are scheduled for Phase 3.</p>
+            <h4 className="text-xl font-black text-brand-dark tracking-tighter">
+              {isWaitingForMpesa ? 'Waiting for PIN...' : 'Customer Payment'}
+            </h4>
+            <p className="text-xs text-gray-500 font-medium mt-3 leading-relaxed px-8">
+              {isWaitingForMpesa 
+                ? 'We sent a request to the phone. The customer should enter their PIN to authorize.'
+                : 'Enter the customer\'s mobile number to send an automated payment request.'}
+            </p>
           </div>
-          <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            Manual Verification Required
+
+          <div className="space-y-4">
+            {!isWaitingForMpesa ? (
+              <>
+                <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 italic space-y-4">
+                  <div className="text-left space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">M-Pesa Number</label>
+                    <input 
+                      type="text"
+                      placeholder="0712 XXX XXX"
+                      className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all placeholder:text-gray-300"
+                      value={mpesaPhone}
+                      onChange={(e) => setMpesaPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleMpesaPush} 
+                  className="w-full py-5 rounded-[26px] shadow-xl shadow-brand-green/10 group"
+                  disabled={!mpesaPhone}
+                >
+                  Confirm & Send Push
+                  <Smartphone size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 space-y-2">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount to Charge</p>
+                  <p className="text-2xl font-black text-brand-green">{totals.total.toLocaleString()} KES</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] text-gray-400 font-bold animate-pulse">DO NOT CLOSE THIS MODAL UNTIL PAYMENT IS COMPLETE</p>
+                  <Button variant="ghost" onClick={() => setIsWaitingForMpesa(false)} className="text-red-500 hover:bg-red-50">Cancel Request</Button>
+                </div>
+              </div>
+            )}
           </div>
-          <Button onClick={() => completeSale('mpesa')} className="w-full py-5 rounded-[26px]">
-            Simulate Payment Success
-          </Button>
         </div>
       </Modal>
 
@@ -544,11 +613,11 @@ export default function PosPage() {
             <div className="space-y-3">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Sold Items</h4>
               <div className="space-y-2">
-                {lastSale.items?.map((item: { id: string; name: string; quantity: number; unit?: string; price: number }) => (
+                {lastSale.items?.map((item: SaleItem) => (
                   <div key={item.id} className="flex justify-between items-center p-4 bg-white border border-gray-50 rounded-2xl shadow-sm">
                     <div>
                       <p className="font-bold text-brand-dark text-sm">{item.name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{item.quantity} {item.unit} × {item.price.toLocaleString()}</p>
+                      <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{item.quantity} {item.unit || 'pcs'} × {item.price.toLocaleString()}</p>
                     </div>
                     <span className="font-black text-brand-dark tracking-tight">{(item.quantity * item.price).toLocaleString()}</span>
                   </div>
@@ -600,12 +669,17 @@ export default function PosPage() {
         .scrollbar-thin::-webkit-scrollbar {
           width: 4px;
         }
-        .scrollbar-thumb-gray-200::-webkit-scrollbar-thumb {
-          background-color: #cbd5e1;
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #f1f1f1;
           border-radius: 10px;
         }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #e1e1e1;
+        }
       `}</style>
-
     </div>
   );
 }

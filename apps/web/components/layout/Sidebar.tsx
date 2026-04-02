@@ -1,5 +1,8 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import KitnLogo from '@/components/ui/KitnLogo';
 import { createClient } from '@/lib/supabase/client';
@@ -14,8 +17,6 @@ import {
   UserCog, 
   GitBranch,
   Settings,
-  User,
-  LogOut,
   ChevronUp
 } from 'lucide-react';
 
@@ -52,14 +53,47 @@ const NavGroup = ({ title, children }: { title: string; children: React.ReactNod
   </div>
 );
 
-export default function Sidebar({ initials, name }: { initials: string; name: string }) {
+export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userData, setUserData] = useState<{
+    fullName: string;
+    email: string;
+    role: string;
+    initials: string;
+    avatarUrl?: string;
+  } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('full_name, role, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          const initials = profile.full_name
+            ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
+            : 'U';
+          setUserData({
+            fullName: profile.full_name || 'User',
+            email: user.email || '',
+            role: profile.role || 'Member',
+            initials,
+            avatarUrl: profile.avatar_url,
+          });
+        }
+      }
+    };
+
+    fetchUserData();
+
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
@@ -67,7 +101,7 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -75,10 +109,12 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
     router.refresh();
   };
 
+  const roleColor = userData?.role === 'admin' ? '#D85A30' : userData?.role === 'manager' ? '#378ADD' : '#1D9E75';
+
   return (
     <aside className="w-[220px] bg-[#1A1A2E] flex flex-col flex-shrink-0 z-20 shadow-2xl border-r border-white/5">
       {/* Logo Section */}
-      <div className="p-7 flex items-center gap-3 bg-gradient-to-b from-white/5 to-transparent">
+      <div className="p-7 flex items-center gap-3">
         <div className="p-2 bg-white/5 rounded-xl shadow-inner border border-white/5">
           <KitnLogo size="sm" />
         </div>
@@ -89,7 +125,7 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 scrollbar-hide px-2">
+      <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide px-2">
         <NavGroup title="Operation">
           <NavItem href="/dashboard" label="Home" icon={<LayoutDashboard size={18} />} active={pathname === '/dashboard'} />
           <NavItem href="/dashboard/pos" label="POS Terminal" icon={<Terminal size={18} />} active={pathname === '/dashboard/pos'} />
@@ -110,49 +146,95 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
         </NavGroup>
       </nav>
 
-      {/* User Footer with Dropdown */}
-      <div className="relative p-5 border-t border-white/5 bg-black/20 m-3 rounded-2xl border border-white/0 hover:border-white/5" ref={menuRef}>
-        {isMenuOpen && (
-          <div className="absolute bottom-full left-0 w-full mb-2 bg-[#1f1f3a] border border-white/10 rounded-2xl shadow-2xl py-2 animate-in slide-in-from-bottom-2 duration-300 z-30">
-            <Link 
-              href="/dashboard/profile" 
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-xs font-black text-gray-400 hover:text-white hover:bg-white/5 transition-all mx-2 rounded-xl"
-            >
-              <User size={14} className="text-brand-green" />
-              My Profile
-            </Link>
-            <Link 
-              href="/dashboard/settings" 
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-xs font-black text-gray-400 hover:text-white hover:bg-white/5 transition-all mx-2 rounded-xl"
-            >
-              <Settings size={14} className="text-brand-blue" />
-              Settings
-            </Link>
-            <div className="my-2 h-[1px] bg-white/5 mx-4" />
-            <button 
-              onClick={handleSignOut}
-              className="w-[calc(100%-16px)] flex items-center gap-3 px-4 py-2.5 text-xs font-black text-brand-coral hover:bg-brand-coral/10 transition-all mx-2 rounded-xl"
-            >
-              <LogOut size={14} />
-              Sign Out
-            </button>
+      {/* User Card & Popup Menu */}
+      <div className="p-4 relative" ref={menuRef}>
+        {/* Popup Menu (Above the card) */}
+        {isMenuOpen && userData && (
+          <div 
+            className="absolute bottom-full left-4 bg-[#1E2235] border-[0.5px] border-white/10 rounded-2xl shadow-2xl py-3 w-[calc(100%-32px)] mb-3 animate-in fade-in slide-in-from-bottom-4 duration-300 z-50 overflow-hidden"
+          >
+            {/* Header */}
+            <div className="px-5 py-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-[11px] font-black shrink-0 relative overflow-hidden">
+                {userData.avatarUrl ? (
+                  <Image 
+                    src={userData.avatarUrl} 
+                    alt="Avatar" 
+                    fill 
+                    className="object-cover" 
+                    unoptimized 
+                  />
+                ) : userData.initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[12px] font-black text-white truncate">{userData.fullName}</p>
+                <p className="text-[10px] text-gray-500 font-bold truncate">{userData.email}</p>
+              </div>
+            </div>
+
+            <div className="h-[0.5px] bg-white/5 mx-5 my-1" />
+
+            {/* Menu Items */}
+            <div className="p-1.5 space-y-0.5">
+              <Link 
+                href="/dashboard/profile"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-white hover:bg-brand-green transition-colors"
+              >
+                <span className="text-base">👤</span>
+                <span className="font-bold">My Profile</span>
+              </Link>
+
+              <Link 
+                href="/dashboard/settings"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-white hover:bg-brand-green transition-colors"
+              >
+                <span className="text-base">⚙️</span>
+                <span className="font-bold">Settings</span>
+              </Link>
+
+              <div className="h-[0.5px] bg-white/5 mx-3 my-1.5" />
+
+              <button 
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] text-[#E24B4A] hover:bg-white/5 transition-colors"
+              >
+                <span className="text-base">🔴</span>
+                <span className="font-bold">Sign Out</span>
+              </button>
+            </div>
           </div>
         )}
-        
+
+        {/* User Card Trigger */}
         <div 
-          className="flex items-center gap-3 cursor-pointer group"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${isMenuOpen ? 'bg-white/5' : 'hover:bg-white/5'}`}
         >
-          <div className="w-10 h-10 rounded-xl bg-brand-green flex items-center justify-center text-white font-black text-sm shadow-lg shadow-brand-green/20 group-hover:scale-110 transition-transform">
-            {initials}
+          <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-lg shadow-brand-green/10 relative overflow-hidden">
+            {userData?.avatarUrl ? (
+              <Image 
+                src={userData.avatarUrl} 
+                alt="Avatar" 
+                fill 
+                className="object-cover" 
+                unoptimized 
+              />
+            ) : userData?.initials || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-white truncate">{name}</p>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Administrator</p>
+            <p className="text-[12px] font-bold text-white truncate">{userData?.fullName || 'Loading...'}</p>
+            <div 
+              className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white"
+              style={{ backgroundColor: roleColor }}
+            >
+              {userData?.role || 'User'}
+            </div>
           </div>
-          <ChevronUp size={14} className={`text-gray-500 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`} />
+          <div className={`transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`}>
+            <ChevronUp size={14} className="text-gray-500" />
+          </div>
         </div>
       </div>
     </aside>
