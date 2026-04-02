@@ -310,7 +310,7 @@ export default function ProductsPage() {
 
       {/* Products Table */}
       <Table headers={['#', 'Product Name', 'Barcode', 'Category', 'Buy Price', 'Sell Price', 'VAT', 'Unit', 'Stock', 'Status', 'Actions']} loading={loading}>
-        {filteredProducts.map((p, i) => {
+        {filteredProducts.length > 0 ? filteredProducts.map((p, i) => {
           const stock = p.inventory?.[0]?.quantity || 0;
           const reorder = p.inventory?.[0]?.reorder_level || 10;
           
@@ -373,7 +373,13 @@ export default function ProductsPage() {
               </td>
             </tr>
           );
-        })}
+        }) : (
+          <tr>
+            <td colSpan={11} className="py-20 text-center font-medium text-gray-400 italic">
+              No products found matching your search.
+            </td>
+          </tr>
+        )}
       </Table>
 
     </div>

@@ -98,7 +98,7 @@ export default function PosPage() {
     category?: string; 
     barcode?: string 
   }>>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [cashierName, setCashierName] = useState('Cashier');
@@ -240,8 +240,19 @@ export default function PosPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-brand-green/20 border-t-brand-green rounded-full animate-spin" />
+          <p className="text-xs font-black text-brand-dark uppercase tracking-widest animate-pulse">Initializing Terminal...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-8 overflow-hidden animate-in fade-in duration-700">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] gap-6 animate-in fade-in duration-500">
       
       {/* Left Column: Product Selection */}
       <div className="flex-1 flex flex-col gap-6">

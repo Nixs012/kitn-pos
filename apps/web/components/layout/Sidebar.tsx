@@ -70,21 +70,21 @@ export default function Sidebar({ initials, name }: { initials: string; name: st
       <nav className="flex-1 overflow-y-auto py-6 scrollbar-hide px-2">
         <NavGroup title="Operation">
           <NavItem href="/dashboard" label="Home" icon={<LayoutDashboard size={18} />} active={pathname === '/dashboard'} />
-          <NavItem href="/pos" label="POS Terminal" icon={<Terminal size={18} />} active={pathname === '/pos'} />
-          <NavItem href="/products" label="Products" icon={<Package size={18} />} active={pathname === '/products'} />
-          <NavItem href="/inventory" label="Inventory" icon={<Boxes size={18} />} active={pathname === '/inventory'} />
+          <NavItem href="/dashboard/pos" label="POS Terminal" icon={<Terminal size={18} />} active={pathname === '/dashboard/pos'} />
+          <NavItem href="/dashboard/products" label="Products" icon={<Package size={18} />} active={pathname === '/dashboard/products'} />
+          <NavItem href="/dashboard/inventory" label="Inventory" icon={<Boxes size={18} />} active={pathname === '/dashboard/inventory'} />
         </NavGroup>
 
         <NavGroup title="Analytics">
-          <NavItem href="/reports/sales" label="Sales Reports" icon={<BarChart3 size={18} />} active={pathname === '/reports/sales'} />
-          <NavItem href="/profit" label="Finance" icon={<TrendingUp size={18} />} active={pathname === '/profit'} />
-          <NavItem href="/customers" label="Directory" icon={<Users size={18} />} active={pathname === '/customers'} />
+          <NavItem href="/dashboard/reports/sales" label="Sales Reports" icon={<BarChart3 size={18} />} active={pathname === '/dashboard/reports/sales'} />
+          <NavItem href="/dashboard/finance" label="Finance" icon={<TrendingUp size={18} />} active={pathname === '/dashboard/finance'} />
+          <NavItem href="/dashboard/directory" label="Directory" icon={<Users size={18} />} active={pathname === '/dashboard/directory'} />
         </NavGroup>
 
         <NavGroup title="System">
-          <NavItem href="/users" label="Team" icon={<UserCog size={18} />} active={pathname === '/users'} />
-          <NavItem href="/branches" label="Outlets" icon={<GitBranch size={18} />} active={pathname === '/branches'} />
-          <NavItem href="/settings" label="Settings" icon={<Settings size={18} />} active={pathname === '/settings'} />
+          <NavItem href="/dashboard/users" label="Team" icon={<UserCog size={18} />} active={pathname === '/dashboard/users'} />
+          <NavItem href="/dashboard/branches" label="Outlets" icon={<GitBranch size={18} />} active={pathname === '/dashboard/branches'} />
+          <NavItem href="/dashboard/settings" label="Settings" icon={<Settings size={18} />} active={pathname === '/dashboard/settings'} />
         </NavGroup>
       </nav>
 

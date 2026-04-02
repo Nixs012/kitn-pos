@@ -307,7 +307,7 @@ export default function SalesReportsPage() {
               </div>
             </div>
             <Table headers={['Receipt #', 'Date & Time', 'Cashier', 'Payment', 'Amount', 'Actions']} loading={loading}>
-              {pagedSales.map(sale => (
+              {pagedSales.length > 0 ? pagedSales.map(sale => (
                 <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-5 font-black text-brand-dark">{sale.receipt_number}</td>
                   <td className="px-6 py-5">
@@ -330,7 +330,13 @@ export default function SalesReportsPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={6} className="py-20 text-center font-medium text-gray-400 italic">
+                    No transactions found for the selected period.
+                  </td>
+                </tr>
+              )}
             </Table>
           </div>
         </div>
