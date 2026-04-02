@@ -16,7 +16,7 @@ export interface CartProduct {
   selling_price?: number | string;
   vat_rate?: number | string;
   unit?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface CartStore {
