@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore, UserProfile } from '@/stores/userStore';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 
-export function UserHydrator({ user, profile }: { user: User | null; profile: any }) {
+export function UserHydrator({ user, profile }: { user: User | null; profile: UserProfile | null }) {
   const setAuth = useUserStore((state) => state.setAuth);
   const clearAuth = useUserStore((state) => state.clearAuth);
   const supabase = createClient();

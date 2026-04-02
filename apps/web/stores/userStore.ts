@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { User } from '@supabase/supabase-js';
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   full_name: string | null;
   role: string | null;
