@@ -1,52 +1,66 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+interface CallbackItem {
+  Name: string;
+  Value?: string | number;
+}
+
+export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { Body: { stkCallback } } = body;
+    console.log('M-Pesa Callback Received:', JSON.stringify(body, null, 2));
+
+    const { stkCallback } = body.Body;
+    const {
+      CheckoutRequestID,
+      ResultCode,
+      ResultDesc,
+      CallbackMetadata
+    } = stkCallback;
+
     const supabase = await createClient();
 
-    const checkoutRequestID = stkCallback.CheckoutRequestID;
-    const resultCode = stkCallback.ResultCode;
-    const resultDesc = stkCallback.ResultDesc;
+    // 1. Log the callback result
+    console.log(`STK Push Callback for ${CheckoutRequestID}: ${ResultDesc} (${ResultCode})`);
 
-    if (resultCode === 0) {
-      // Success
-      const mpesaReceipt = stkCallback.CallbackMetadata.Item.find((item: { Name: string; Value: string }) => item.Name === 'MpesaReceiptNumber')?.Value;
-      
-      // Update sale record
-      const { data: sale } = await supabase
+    if (ResultCode === 0 && CallbackMetadata) {
+      // SUCCESS
+      const items: CallbackItem[] = CallbackMetadata.Item;
+      const receipt = items.find((i) => i.Name === 'MpesaReceiptNumber')?.Value;
+
+      // 2. Update the sale record
+      // We assume the CheckoutRequestID was stored in the mpesa_ref temporarily
+      const { data: sale, error: saleError } = await supabase
         .from('sales')
         .update({
-          mpesa_ref: mpesaReceipt,
+          payment_method: 'mpesa',
+          mpesa_ref: String(receipt),
           synced_at: new Date().toISOString()
         })
-        .eq('mpesa_ref', checkoutRequestID) // Use checkoutRequestID to find the pending sale
+        .eq('mpesa_ref', CheckoutRequestID)
         .select()
         .single();
 
-      if (sale) {
-        // Success: Log audit
-        await supabase.from('audit_log').insert({
-          user_id: sale.cashier_id,
-          action: 'PAYMENT_SUCCESS',
-          table_name: 'sales',
-          record_id: sale.id,
-          new_data: { mpesa_receipt: mpesaReceipt, amount: sale.total_amount }
-        });
-        
-        // Stock deduction is handled by the SQL trigger in 005_inventory.sql on sale_items insert
-        // But here we might want to trigger any app-side success logic
+      if (saleError) {
+        console.error('Error updating sale from callback:', saleError);
+      } else {
+        console.log('Sale completed successfully via M-Pesa:', sale?.id);
       }
     } else {
-      // Failure
-      console.warn(`M-Pesa Payment Failed: ${resultDesc}`);
+      // FAILED or CANCELLED
+      console.warn(`M-Pesa Payment Failed/Cancelled: ${ResultDesc}`);
+      
+      // Optionally mark the sale as failed/cancelled
+      await supabase
+        .from('sales')
+        .update({ mpesa_ref: `FAILED-${CheckoutRequestID}` })
+        .eq('mpesa_ref', CheckoutRequestID);
     }
 
     return NextResponse.json({ ResultCode: 0, ResultDesc: 'Success' });
-  } catch (error: unknown) {
-    console.error('M-Pesa Callback Error:', error);
+  } catch (err: unknown) {
+    console.error('M-Pesa Callback Error:', err);
     return NextResponse.json({ ResultCode: 1, ResultDesc: 'Internal Error' }, { status: 500 });
   }
 }

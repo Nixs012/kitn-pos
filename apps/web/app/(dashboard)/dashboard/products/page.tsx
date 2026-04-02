@@ -19,6 +19,7 @@ import Input from '@/components/ui/Input';
 import Table from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import Papa from 'papaparse';
 
 // Types from schema
 interface Product {
@@ -58,6 +59,7 @@ export default function ProductsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [profile, setProfile] = useState<{ tenant_id: string, branch_id: string } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
 
   // Form states
@@ -224,6 +226,77 @@ export default function ProductsPage() {
     }
   };
 
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const loadingToast = toast.loading('Importing products...');
+
+    interface CSVRow {
+      Name?: string;
+      name?: string;
+      Category?: string;
+      category?: string;
+      'Buying Price'?: string;
+      buying_price?: string;
+      'Selling Price'?: string;
+      selling_price?: string;
+      SKU?: string;
+      sku?: string;
+      Unit?: string;
+      unit?: string;
+      Stock?: string;
+      stock?: string;
+      Barcode?: string;
+      barcode?: string;
+    }
+
+    Papa.parse<CSVRow>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const productsData = results.data.map((row) => ({
+            name: row.Name || row.name || 'Untitled Product',
+            category: row.Category || row.category || 'Uncategorized',
+            buying_price: parseFloat(row['Buying Price'] || row.buying_price || '0') || 0,
+            selling_price: parseFloat(row['Selling Price'] || row.selling_price || '0') || 0,
+            sku: row.SKU || row.sku || '',
+            unit: row.Unit || row.unit || 'pcs',
+            stock: parseInt(row.Stock || row.stock || '0') || 0,
+            barcode: row.Barcode || row.barcode || ''
+          }));
+
+          const response = await fetch('/api/products/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ products: productsData })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            toast.success(`Successfully imported ${data.count} products`, { id: loadingToast });
+            fetchProducts();
+          } else {
+            throw new Error(data.error || 'Import failed');
+          }
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Import failed';
+          toast.error(message, { id: loadingToast });
+        } finally {
+          setIsImporting(false);
+          if (e.target) e.target.value = '';
+        }
+      },
+      error: (error) => {
+        toast.error('CSV Parsing Error: ' + error.message, { id: loadingToast });
+        setIsImporting(false);
+      }
+    });
+  };
+
   const openEditModal = (product: Product) => {
     setCurrentProduct(product);
     setFormData({
@@ -266,13 +339,15 @@ export default function ProductsPage() {
             id="csv-import" 
             className="hidden" 
             accept=".csv" 
-            onChange={(e) => {
-              if (e.target.files?.[0]) {
-                toast.info(`Parsing ${e.target.files[0].name}... CRUD import logic coming soon.`);
-              }
-            }} 
+            disabled={isImporting}
+            onChange={handleImportCSV} 
           />
-          <Button variant="outline" className="gap-2" onClick={() => document.getElementById('csv-import')?.click()}>
+          <Button 
+            variant="outline" 
+            className="gap-2" 
+            onClick={() => document.getElementById('csv-import')?.click()}
+            loading={isImporting}
+          >
             <Download size={16} /> Import CSV
           </Button>
           <Button onClick={() => setIsAddModalOpen(true)} className="gap-2">

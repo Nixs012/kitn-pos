@@ -19,9 +19,6 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const initials = user.email?.substring(0, 2).toUpperCase() || 'KM';
-  const name = user.email?.split('@')[0] || 'Kelvin Admin';
-  
   const currentDate = new Date().toLocaleDateString('en-KE', {
     weekday: 'long',
     year: 'numeric',
@@ -35,7 +32,7 @@ export default async function DashboardLayout({
         <NavigationProgress />
       </Suspense>
 
-      <Sidebar initials={initials} name={name} />
+      <Sidebar />
 
       {/* Main Content Pane */}
       <div className="flex flex-col flex-1 h-screen overflow-hidden">
