@@ -72,7 +72,7 @@ export default function Sidebar() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: profile, error } = await supabase
+          const { data: profile } = await supabase
             .from('user_profiles')
             .select('full_name, role, avatar_url')
             .eq('id', user.id)
