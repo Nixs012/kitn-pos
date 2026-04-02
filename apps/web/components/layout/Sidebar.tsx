@@ -69,26 +69,41 @@ export default function Sidebar() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('full_name, role, avatar_url')
-          .eq('id', user.id)
-          .single();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile, error } = await supabase
+            .from('user_profiles')
+            .select('full_name, role, avatar_url')
+            .eq('id', user.id)
+            .single();
 
-        if (profile) {
-          const initials = profile.full_name
-            ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
-            : 'U';
-          setUserData({
-            fullName: profile.full_name || 'User',
-            email: user.email || '',
-            role: profile.role || 'Member',
-            initials,
-            avatarUrl: profile.avatar_url,
-          });
+          const fallbackName = user.email?.split('@')[0] || 'User';
+          
+          if (profile) {
+            const initials = profile.full_name
+              ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()
+              : fallbackName[0].toUpperCase();
+            
+            setUserData({
+              fullName: profile.full_name || fallbackName,
+              email: user.email || '',
+              role: profile.role || 'Member',
+              initials,
+              avatarUrl: profile.avatar_url,
+            });
+          } else {
+            // Fallback for logged in users without a profile yet
+            setUserData({
+              fullName: fallbackName,
+              email: user.email || '',
+              role: 'Member',
+              initials: fallbackName[0].toUpperCase(),
+            });
+          }
         }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
       }
     };
 
