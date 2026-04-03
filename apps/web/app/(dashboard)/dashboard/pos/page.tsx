@@ -358,6 +358,8 @@ export default function PosPage() {
     }
   };
 
+  const [showMobileCart, setShowMobileCart] = useState(false);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -370,137 +372,169 @@ export default function PosPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)] gap-6 animate-in fade-in duration-500">
+    <div className="h-[calc(100vh-140px)] flex flex-col gap-6 overflow-hidden">
       
-      {/* Left Column: Product Selection */}
-      <div className="flex-1 flex flex-col gap-6">
-        
-        {/* Search & Scan */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search product or scan barcode..."
-              className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-6 py-5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-brand-green/20"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-brand-green hover:text-white transition-all">
-              <Camera size={20} />
-            </button>
+      {/* Mobile Cart Toggle */}
+      <div className="lg:hidden flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brand-green/10 flex items-center justify-center text-brand-green">
+            <ShoppingCart size={20} />
           </div>
-          
-          <div className="flex gap-2 bg-white/50 p-1.5 rounded-[24px] border border-gray-100 overflow-x-auto scrollbar-hide">
-            {categories.map(cat => (
-              <button 
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                  category === cat ? 'bg-brand-green text-white shadow-lg shadow-brand-green/20' : 'bg-white text-gray-400 hover:text-brand-dark'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Cart Summary</p>
+            <p className="text-sm font-black text-brand-dark">{items.length} Items — {totals.total.toLocaleString()} KES</p>
           </div>
         </div>
-
-        {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
-            {filteredProducts.map(product => (
-              <ProductCard key={product.id} product={product} onAdd={addItem} />
-            ))}
-          </div>
-        </div>
+        <Button 
+          variant={showMobileCart ? 'ghost' : 'primary'}
+          onClick={() => setShowMobileCart(!showMobileCart)}
+          className="rounded-xl px-4 py-2 text-xs"
+        >
+          {showMobileCart ? 'Hide Order' : 'View Order'}
+        </Button>
       </div>
 
-      {/* Right Column: Checkout Terminal */}
-      <div className="w-full lg:w-[400px] flex flex-col gap-4">
-        <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm flex-1 flex flex-col overflow-hidden">
-          <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green">
-                <ShoppingCart size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-brand-dark tracking-tighter">Current Order</h2>
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{items.length} Items Selected</p>
-              </div>
-            </div>
-            <button onClick={() => clearCart()} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
-            {items.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale p-10">
-                <ShoppingCart size={64} className="mb-4" />
-                <p className="text-sm font-bold text-brand-dark uppercase tracking-widest">Cart is Empty</p>
-              </div>
-            ) : (
-              items.map(item => (
-                <div key={item.id} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-50 animate-in slide-in-from-right-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-brand-dark text-sm truncate">{item.name}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.price.toLocaleString()} KES</p>
-                  </div>
-                  <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl shadow-sm border border-gray-100">
-                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 text-gray-400 hover:text-brand-green"><Minus size={14} /></button>
-                    <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 text-gray-400 hover:text-brand-green"><Plus size={14} /></button>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-black text-brand-dark">{(item.price * item.quantity).toLocaleString()}</p>
-                    <button onClick={() => removeItem(item.id)} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase">Remove</button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="p-6 bg-gray-50/50 border-t border-gray-100 space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                <span>Subtotal</span>
-                <span>{totals.subtotal.toLocaleString()} KES</span>
-              </div>
-              <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                <span>VAT (16%)</span>
-                <span>{totals.vat.toLocaleString()} KES</span>
-              </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-xs font-bold text-brand-coral uppercase tracking-widest">
-                  <span>Discount</span>
-                  <span>-{discount.toLocaleString()} KES</span>
-                </div>
-              )}
+      <div className="flex-1 flex flex-row gap-6 min-h-0 overflow-hidden relative">
+        
+        {/* Left Column: Product Selection */}
+        <div className={`flex-1 flex flex-col gap-6 min-w-0 ${showMobileCart ? 'hidden lg:flex' : 'flex'}`}>
+          
+          {/* Search & Scan */}
+          <div className="flex flex-col md:flex-row gap-4 shrink-0">
+            <div className="flex-1 relative">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="text" 
+                placeholder="Search product or scan barcode..."
+                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-6 py-5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-brand-green/20"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-brand-green hover:text-white transition-all">
+                <Camera size={20} />
+              </button>
             </div>
             
-            <div className="pt-4 border-t border-gray-200 flex justify-between items-end">
-              <span className="text-sm font-black text-brand-dark uppercase tracking-tighter">Total Payable</span>
-              <span className="text-3xl font-black text-brand-green tracking-tighter">
-                <span className="text-xs text-gray-400 mr-2 uppercase">KES</span>
-                {totals.total.toLocaleString()}
-              </span>
+            <div className="flex gap-2 bg-white/50 p-1.5 rounded-[24px] border border-gray-100 overflow-x-auto scrollbar-hide">
+              {categories.map(cat => (
+                <button 
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                    category === cat ? 'bg-brand-green text-white shadow-lg shadow-brand-green/20' : 'bg-white text-gray-400 hover:text-brand-dark'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
-          
-          <div className="p-6 grid grid-cols-3 gap-3">
-            <button onClick={() => handleCharge('cash')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-blue/10 hover:text-brand-blue transition-all group">
-              <Banknote size={20} className="group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
-            </button>
-            <button onClick={() => handleCharge('mpesa')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-green/10 hover:text-brand-green transition-all group">
-              <Smartphone size={20} className="group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest">M-Pesa</span>
-            </button>
-            <button onClick={() => handleCharge('card')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-purple-100 hover:text-purple-600 transition-all group">
-              <CreditCard size={20} className="group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Card</span>
-            </button>
+
+          {/* Product Grid */}
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product} onAdd={addItem} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Checkout Terminal */}
+        <div className={`
+          ${showMobileCart ? 'flex absolute inset-0 z-40 bg-white p-4' : 'hidden'} 
+          lg:relative lg:flex lg:w-[400px] lg:bg-transparent lg:p-0
+          flex-col gap-4 animate-in slide-in-from-right-4 duration-300
+        `}>
+          <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm flex-1 flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand-green/10 flex items-center justify-center text-brand-green">
+                  <ShoppingCart size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-brand-dark tracking-tighter">Current Order</h2>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{items.length} Items Selected</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => clearCart()} className="p-2 text-gray-300 hover:text-red-500 transition-colors" title="Clear Cart">
+                  <X size={20} />
+                </button>
+                <button className="lg:hidden p-2 text-gray-400" onClick={() => setShowMobileCart(false)}>
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
+              {items.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale p-10">
+                  <ShoppingCart size={64} className="mb-4" />
+                  <p className="text-sm font-bold text-brand-dark uppercase tracking-widest">Cart is Empty</p>
+                </div>
+              ) : (
+                items.map(item => (
+                  <div key={item.id} className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-2xl border border-gray-50 animate-in slide-in-from-right-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-brand-dark text-sm truncate">{item.name}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.price.toLocaleString()} KES</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl shadow-sm border border-gray-100">
+                      <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 text-gray-400 hover:text-brand-green"><Minus size={14} /></button>
+                      <span className="text-xs font-black min-w-[20px] text-center">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 text-gray-400 hover:text-brand-green"><Plus size={14} /></button>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-black text-brand-dark">{(item.price * item.quantity).toLocaleString()}</p>
+                      <button onClick={() => removeItem(item.id)} className="text-[10px] font-bold text-red-400 hover:text-red-600 uppercase">Remove</button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-6 bg-gray-50/50 border-t border-gray-100 space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  <span>Subtotal</span>
+                  <span>{totals.subtotal.toLocaleString()} KES</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  <span>VAT (16%)</span>
+                  <span>{totals.vat.toLocaleString()} KES</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-xs font-bold text-brand-coral uppercase tracking-widest">
+                    <span>Discount</span>
+                    <span>-{discount.toLocaleString()} KES</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="pt-4 border-t border-gray-200 flex justify-between items-end">
+                <span className="text-sm font-black text-brand-dark uppercase tracking-tighter">Total Payable</span>
+                <span className="text-3xl font-black text-brand-green tracking-tighter">
+                  <span className="text-xs text-gray-400 mr-2 uppercase">KES</span>
+                  {totals.total.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            
+            <div className="p-6 grid grid-cols-3 gap-3">
+              <button onClick={() => handleCharge('cash')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-blue/10 hover:text-brand-blue transition-all group">
+                <Banknote size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
+              </button>
+              <button onClick={() => handleCharge('mpesa')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-green/10 hover:text-brand-green transition-all group">
+                <Smartphone size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">M-Pesa</span>
+              </button>
+              <button onClick={() => handleCharge('card')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-purple-100 hover:text-purple-600 transition-all group">
+                <CreditCard size={20} className="group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Card</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
