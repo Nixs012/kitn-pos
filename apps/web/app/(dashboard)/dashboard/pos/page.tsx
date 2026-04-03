@@ -428,69 +428,67 @@ export default function PosPage() {
         <div className={`flex-1 flex flex-col gap-6 min-w-0 ${showMobileCart ? 'hidden lg:flex' : 'flex'}`}>
           
           {/* Search & Scan */}
-          <div className="flex flex-col md:flex-row gap-4 shrink-0 px-2 lg:px-0">
+          <div className="flex flex-col md:flex-row gap-4 shrink-0 px-2 lg:px-0 items-stretch">
             <div className="flex-1 relative group">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-green transition-colors" size={20} />
               <input 
                 type="text" 
-                placeholder="Search product or scan barcode..."
-                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-32 py-5 text-sm font-bold text-brand-dark shadow-sm outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                placeholder="Search product..."
+                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-12 py-5 text-sm font-bold text-brand-dark shadow-sm outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                {search && (
-                  <button 
-                    onClick={() => setSearch('')}
-                    className="p-2 text-gray-400 hover:text-brand-coral transition-all mr-1"
-                    title="Clear search"
-                  >
-                    <X size={18} />
-                  </button>
-                )}
-                <Button 
-                  size="sm" 
-                  onClick={handleManualSearch}
-                  className="rounded-xl px-4 py-2 text-[10px] uppercase font-black tracking-widest hidden md:flex"
-                >
-                  Search
-                </Button>
+              {search && (
                 <button 
-                  onClick={() => setIsScannerOpen(!isScannerOpen)}
-                  className={`p-3 rounded-2xl transition-all shadow-sm active:scale-95 ${
-                    isScannerOpen ? 'bg-brand-coral text-white' : 'bg-gray-50 text-gray-400 hover:bg-brand-green hover:text-white'
-                  }`}
-                  title="Open Scanner"
+                  onClick={() => setSearch('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-brand-coral transition-all"
                 >
-                  <Camera size={20} />
+                  <X size={18} />
                 </button>
-              </div>
+              )}
             </div>
 
-            {isScannerOpen && (
-              <div className="lg:absolute lg:top-full lg:left-0 lg:mt-4 z-50 w-full">
-                <BarcodeScanner 
-                  onScan={handleBarcodeScan} 
-                  onClose={() => setIsScannerOpen(false)}
-                  isBulkMode={true}
-                />
-              </div>
-            )}
-            
-            <div className="flex gap-2 bg-white/50 p-1.5 rounded-[24px] border border-gray-100 overflow-x-auto scrollbar-hide">
-              {categories.map(cat => (
-                <button 
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                    category === cat ? 'bg-brand-green text-white shadow-lg shadow-brand-green/20' : 'bg-white text-gray-400 hover:text-brand-dark'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleManualSearch}
+                className="rounded-[24px] px-8 py-5 text-xs uppercase font-black tracking-widest shadow-lg shadow-brand-green/10 min-w-[120px]"
+              >
+                Search
+              </Button>
+              <button 
+                onClick={() => setIsScannerOpen(!isScannerOpen)}
+                className={`p-5 rounded-[24px] transition-all shadow-sm active:scale-95 flex items-center justify-center min-w-[64px] border ${
+                  isScannerOpen ? 'bg-brand-coral border-brand-coral text-white' : 'bg-white border-gray-100 text-gray-400 hover:border-brand-green hover:text-brand-green'
+                }`}
+              >
+                <Camera size={24} />
+              </button>
             </div>
+          </div>
+
+          {isScannerOpen && (
+            <div className="lg:absolute lg:top-full lg:left-0 lg:mt-4 z-50 w-full animate-in zoom-in duration-200">
+              <BarcodeScanner 
+                onScan={handleBarcodeScan} 
+                onClose={() => setIsScannerOpen(false)}
+                isBulkMode={true}
+              />
+            </div>
+          )}
+            
+          <div className="flex gap-2 bg-white/50 p-1.5 rounded-[24px] border border-gray-100 overflow-x-auto scrollbar-hide">
+            {categories.map(cat => (
+              <button 
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  category === cat ? 'bg-brand-green text-white shadow-lg shadow-brand-green/20' : 'bg-white text-gray-400 hover:text-brand-dark'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
 
           {/* Product Grid */}
@@ -713,11 +711,11 @@ export default function PosPage() {
             <div className="bg-gray-50 p-6 rounded-[28px] border border-gray-100 space-y-3">
               <div className="flex justify-between items-center text-[10px] font-black text-gray-500 uppercase tracking-widest">
                 <span>Receipt Number</span>
-                <span className="text-brand-dark">{lastSale.receipt_number}</span>
+                <span className="text-brand-dark">{lastSale?.receipt_number}</span>
               </div>
               <div className="flex justify-between items-center text-[10px] font-black text-gray-500 uppercase tracking-widest">
                 <span>Date & Time</span>
-                <span className="text-brand-dark">{new Date(lastSale.created_at).toLocaleString()}</span>
+                <span className="text-brand-dark">{lastSale?.created_at ? new Date(lastSale.created_at).toLocaleString() : 'N/A'}</span>
               </div>
               <div className="flex justify-between items-center text-[10px] font-black text-gray-500 uppercase tracking-widest">
                 <span>Cashier Account</span>
@@ -725,14 +723,14 @@ export default function PosPage() {
               </div>
               <div className="flex justify-between items-center text-[10px] font-black text-gray-500 uppercase tracking-widest pt-3 border-t border-gray-200">
                 <span>Payment Mode</span>
-                <span className="text-brand-green font-black">{lastSale.payment_method}</span>
+                <span className="text-brand-green font-black">{lastSale?.payment_method}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Sold Items</h4>
               <div className="space-y-2">
-                {lastSale.items?.map((item: SaleItem) => (
+                {lastSale?.items?.map((item: SaleItem) => (
                   <div key={item.id} className="flex justify-between items-center p-4 bg-white border border-gray-50 rounded-2xl shadow-sm">
                     <div>
                       <p className="font-bold text-brand-dark text-sm">{item.name}</p>
@@ -751,15 +749,15 @@ export default function PosPage() {
               <div className="relative z-10 space-y-3">
                 <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                   <span>Subtotal</span>
-                  <span>{Math.round(lastSale.total_amount + (lastSale.discount || 0)).toLocaleString()} KES</span>
+                  <span>{Math.round((lastSale?.total_amount || 0) + (lastSale?.discount || 0)).toLocaleString()} KES</span>
                 </div>
                 <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                   <span>Discount</span>
-                  <span className="text-brand-coral">-{lastSale.discount?.toLocaleString() || 0} KES</span>
+                  <span className="text-brand-coral">-{lastSale?.discount?.toLocaleString() || 0} KES</span>
                 </div>
                 <div className="flex justify-between items-end pt-5 border-t border-white/10 mt-2">
                   <span className="text-sm font-black text-brand-green uppercase tracking-tighter">Total Amount</span>
-                  <span className="text-3xl font-black text-white tracking-widest">{Number(lastSale.total_amount).toLocaleString()} <span className="text-xs text-white/40 ml-1">KES</span></span>
+                  <span className="text-3xl font-black text-white tracking-widest">{(Number(lastSale?.total_amount) || 0).toLocaleString()} <span className="text-xs text-white/40 ml-1">KES</span></span>
                 </div>
               </div>
             </div>
