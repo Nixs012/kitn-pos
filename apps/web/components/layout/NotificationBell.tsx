@@ -63,7 +63,7 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-brand-dark transition-all hover:shadow-md relative group"
+        className="w-10 h-10 rounded-full bg-brand-green/10 border border-brand-green/20 flex items-center justify-center text-brand-green hover:bg-brand-green/20 transition-all hover:shadow-lg relative group shadow-sm shadow-brand-green/5"
       >
         <Bell size={20} className="group-hover:animate-[bell_0.5s_ease-in-out]" />
         {unreadCount > 0 && (

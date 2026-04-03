@@ -6,7 +6,6 @@ import PageTransition from '@/components/layout/PageTransition';
 import NavigationProgress from '@/components/layout/NavigationProgress';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
-import KitnLogo from '@/components/ui/KitnLogo';
 import { UserHydrator } from '@/components/auth/UserHydrator';
 
 export default async function DashboardLayout({
@@ -68,10 +67,6 @@ export default async function DashboardLayout({
               <span className="text-[10px] font-black text-brand-green tracking-[0.15em] uppercase">Branch Server Online</span>
             </div>
             <NotificationBell />
-            
-            <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:text-brand-dark transition-colors cursor-pointer">
-              <KitnLogo size="sm" />
-            </div>
           </div>
         </header>
 
