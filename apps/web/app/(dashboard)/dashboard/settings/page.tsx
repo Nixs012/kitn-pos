@@ -35,6 +35,27 @@ const ROLES = [
   { value: 'viewer', label: 'Viewer', variant: 'gray' }
 ];
 
+interface IUserProfile {
+  id: string;
+  tenant_id: string;
+  branch_id?: string;
+  role: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  is_active: boolean;
+  last_login?: string;
+  branches?: { name: string; id: string };
+}
+
+interface ICreationDetails {
+  full_name: string;
+  email: string;
+  pin: string;
+  password: string;
+  url: string;
+}
+
 export default function SettingsPage() {
   const supabase = createClient();
   const [activeTab, setActiveTab] = useState<'store' | 'users' | 'devices'>('store');
@@ -52,7 +73,7 @@ export default function SettingsPage() {
     vat_number?: string; 
     logo_url?: string 
   } | null>(null);
-  const [users, setUsers] = useState<Array<{ id: string; full_name: string; role: string; last_login?: string; is_active: boolean; branches?: { name: string } }>>([]);
+  const [users, setUsers] = useState<IUserProfile[]>([]);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   
   // Modal states
@@ -87,10 +108,10 @@ export default function SettingsPage() {
       if (te) throw te;
       setTenant(tenantData);
 
-      // 3. Fetch Users
+      // 3. Fetch Users (including new email/phone columns)
       const { data: usersData, error: ue } = await supabase
         .from('user_profiles')
-        .select('*, branches(name)')
+        .select('*, branches(name, id)')
         .eq('tenant_id', profileData.tenant_id);
       if (ue) throw ue;
       setUsers(usersData || []);
@@ -328,20 +349,21 @@ const StoreSettingsTab = ({ tenant, onUpdate }: {
 };
 
 const UsersTab = ({ users, branches, profile, onUpdate }: { 
-  users: Array<{ 
-    id: string; 
-    full_name: string; 
-    role: string; 
-    last_login?: string; 
-    is_active: boolean; 
-    branches?: { name: string } 
-  }>, 
+  users: IUserProfile[], 
   branches: Array<{ id: string, name: string }>, 
-  profile: { tenant_id: string }, 
+  profile: { id: string, tenant_id: string }, 
   onUpdate: () => void 
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  
+  const [selectedUser, setSelectedUser] = useState<IUserProfile | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const [addFormData, setAddFormData] = useState({
     full_name: '',
     email: '',
     phone: '',
@@ -351,16 +373,32 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
     password: ''
   });
 
+  const [editFormData, setEditFormData] = useState({
+    full_name: '',
+    role: 'cashier',
+    branch_id: '',
+    phone: ''
+  });
+
+  const [pinData, setPinData] = useState({ pin: '', confirmPin: '' });
+  const [createdUserDetails, setCreatedUserDetails] = useState<ICreationDetails | null>(null);
+
+  const generatePassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    let pwd = "";
+    for (let i = 0; i < 12; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    setAddFormData({...addFormData, password: pwd});
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!profile) return;
-
+      setLoading(true);
       const response = await fetch('/api/users/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          ...addFormData,
           tenant_id: profile.tenant_id
         })
       });
@@ -368,110 +406,382 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
 
+      setCreatedUserDetails({
+        ...addFormData,
+        url: window.location.origin
+      });
+      
       toast.success('User account created successfully');
-      setIsModalOpen(false);
+      setIsAddModalOpen(false);
+      setIsSuccessModalOpen(true);
       onUpdate();
+      
+      // Reset form
+      setAddFormData({
+        full_name: '',
+        email: '',
+        phone: '',
+        role: 'cashier',
+        branch_id: branches[0]?.id || '',
+        pin: '',
+        password: ''
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          ...editFormData
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      toast.success('Profile updated successfully');
+      setIsEditModalOpen(false);
+      onUpdate();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Update failed';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    if (pinData.pin !== pinData.confirmPin) {
+      toast.error('PINs do not match');
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          pin_hash: pinData.pin // Using plaintext for MVP as per existing API
+        })
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+
+      toast.success('PIN reset successfully');
+      setIsPinModalOpen(false);
+      setPinData({ pin: '', confirmPin: '' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'PIN reset failed';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (user: IUserProfile | null) => {
+    if (!user || user.id === profile.id) return;
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          is_active: !user.is_active
+        })
+      });
+
+      if (!response.ok) throw new Error('Status update failed');
+      toast.success(`User ${user.is_active ? 'deactivated' : 'activated'} successfully`);
+      setIsDeactivateModalOpen(false);
+      onUpdate();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update status';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied!`);
+  };
+
+  const openEditModal = (user: IUserProfile) => {
+    setSelectedUser(user);
+    setEditFormData({
+      full_name: user.full_name,
+      role: user.role,
+      branch_id: user.branch_id || (branches.length > 0 ? branches[0].id : ''),
+      phone: user.phone || ''
+    });
+    setIsEditModalOpen(true);
+  };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">Team Members</h3>
-          <p className="text-[11px] text-gray-400 font-bold uppercase mt-1">Found {users.length} registered users</p>
+    <div className="p-8 space-y-12">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">Team Members</h3>
+            <p className="text-[11px] text-gray-400 font-bold uppercase mt-1">Manage access for your {users.length} staff members</p>
+          </div>
+          <Button onClick={() => setIsAddModalOpen(true)} className="gap-2">
+            <UserPlus size={16} /> Add New User
+          </Button>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="gap-2">
-          <UserPlus size={16} /> Add New User
-        </Button>
+
+        <Table headers={['Name & Contact', 'Role', 'Branch', 'Status', 'Actions']}>
+          {users.map((u) => (
+            <tr key={u.id} className="group hover:bg-gray-50/50 transition-colors">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-black text-xs border border-brand-green/20">
+                    {u.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-brand-dark">{u.full_name}</p>
+                    <p className="text-[10px] text-gray-400 font-bold lowercase tracking-tight">{u.email}</p>
+                    {u.phone && <p className="text-[9px] text-gray-400 font-medium">{u.phone}</p>}
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <Badge variant={(ROLES.find(r => r.value === u.role)?.variant as 'success' | 'warning' | 'danger' | 'info' | 'gray' | 'purple') || 'gray'}>
+                  {u.role}
+                </Badge>
+              </td>
+              <td className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+                {u.branches?.name || 'All Branches'}
+              </td>
+              <td className="px-6 py-4">
+                <Badge variant={u.is_active ? 'success' : 'gray'}>
+                  {u.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => openEditModal(u)}
+                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+                    title="Edit User"
+                  >
+                    <Plus size={14} />
+                  </button>
+                  <button 
+                    onClick={() => { setSelectedUser(u); setIsPinModalOpen(true); }}
+                    className="p-2 text-gray-400 hover:text-brand-dark hover:bg-gray-100 rounded-lg transition-all"
+                    title="Reset PIN"
+                  >
+                    <Smartphone size={14} />
+                  </button>
+                  <button 
+                    disabled={u.id === profile.id}
+                    onClick={() => { setSelectedUser(u); setIsDeactivateModalOpen(true); }}
+                    className={`p-2 rounded-lg transition-all ${u.id === profile.id ? 'text-gray-200 cursor-not-allowed' : u.is_active ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                    title={u.id === profile.id ? "Cannot deactivate yourself" : u.is_active ? "Deactivate" : "Activate"}
+                  >
+                    <Power size={14} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </Table>
       </div>
 
-      <Table headers={['Name', 'Role', 'Branch', 'Status', 'Last Login', 'Actions']}>
-        {users.map((u) => (
-          <tr key={u.id} className="group hover:bg-gray-50/50 transition-colors">
-            <td className="px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-black text-[10px]">
-                  {u.full_name?.split(' ').map((n: string) => n[0]).join('')}
-                </div>
-                <div>
-                  <p className="text-xs font-black text-brand-dark">{u.full_name}</p>
-                  <p className="text-[10px] text-gray-400 font-bold tracking-tight">System {u.role}</p>
-                </div>
-              </div>
-            </td>
-            <td className="px-6 py-4">
-              <Badge variant={(ROLES.find(r => r.value === u.role)?.variant as 'danger' | 'info' | 'success' | 'gray') || 'gray'}>
-                {u.role}
-              </Badge>
-            </td>
-            <td className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-              {u.branches?.name || 'All Branches'}
-            </td>
-            <td className="px-6 py-4">
-              <Badge variant={u.is_active ? 'success' : 'gray'}>
-                {u.is_active ? 'Active' : 'Inactive'}
-              </Badge>
-            </td>
-            <td className="px-6 py-4 text-[10px] font-bold text-gray-400">
-              {u.last_login ? new Date(u.last_login).toLocaleDateString() : 'Never'}
-            </td>
-            <td className="px-6 py-4">
-              <div className="flex items-center gap-2">
-                <button className="p-2 text-gray-400 hover:text-brand-green hover:bg-green-50 rounded-lg transition-all">
-                  <Plus size={14} />
-                </button>
-                <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
-                  <Power size={14} />
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </Table>
+      {/* Permissions Summary Table */}
+      <div className="space-y-6 pt-12 border-t border-gray-100">
+        <div>
+          <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">Role Permissions Reference</h3>
+          <p className="text-[11px] text-gray-400 font-bold uppercase mt-1">Summary of system access by role</p>
+        </div>
+        <div className="bg-gray-50 rounded-3xl overflow-hidden border border-gray-100">
+            <table className="w-full text-left text-xs">
+                <thead className="bg-gray-100/50">
+                    <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        <th className="px-6 py-4">Feature</th>
+                        <th className="px-6 py-4 text-center">Admin</th>
+                        <th className="px-6 py-4 text-center">Manager</th>
+                        <th className="px-6 py-4 text-center">Cashier</th>
+                        <th className="px-6 py-4 text-center">Viewer</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                    {[
+                        { f: 'Make Sales', a: true, m: true, c: true, v: false },
+                        { f: 'View Reports', a: true, m: true, c: false, v: true },
+                        { f: 'Manage Products', a: true, m: true, c: false, v: false },
+                        { f: 'Manage Users', a: true, m: false, c: false, v: false },
+                        { f: 'View Finance', a: true, m: true, c: false, v: false },
+                        { f: 'Settings', a: true, m: false, c: false, v: false },
+                    ].map((row, i) => (
+                        <tr key={i} className="hover:bg-white transition-colors">
+                            <td className="px-6 py-3 font-bold text-gray-600">{row.f}</td>
+                            <td className="px-6 py-3 text-center">{row.a ? <span className="text-brand-green font-black">✓</span> : <span className="text-red-300">✗</span>}</td>
+                            <td className="px-6 py-3 text-center">{row.m ? <span className="text-brand-green font-black">✓</span> : <span className="text-red-300">✗</span>}</td>
+                            <td className="px-6 py-3 text-center">{row.c ? <span className="text-brand-green font-black">✓</span> : <span className="text-red-300">✗</span>}</td>
+                            <td className="px-6 py-3 text-center">{row.v ? <span className="text-brand-green font-black">✓</span> : <span className="text-red-300">✗</span>}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+      </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New User" size="md">
+      {/* Add User Modal */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New User" size="md">
         <form onSubmit={handleCreateUser} className="space-y-6">
-          <Input label="Full Name*" required value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} />
+          <Input label="Full Name*" required value={addFormData.full_name} onChange={e => setAddFormData({...addFormData, full_name: e.target.value})} />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Email Address*" type="email" required value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-            <Input label="Phone Number" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+            <Input label="Email Address*" type="email" required value={addFormData.email} onChange={e => setAddFormData({...addFormData, email: e.target.value})} />
+            <Input label="Phone Number" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">System Role</label>
               <select 
                 className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
-                value={formData.role}
-                onChange={e => setFormData({...formData, role: e.target.value})}
+                value={addFormData.role}
+                onChange={e => setAddFormData({...addFormData, role: e.target.value})}
               >
-                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                {ROLES.filter(r => r.value !== 'admin').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Branch Access</label>
               <select 
                 className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
-                value={formData.branch_id}
-                onChange={e => setFormData({...formData, branch_id: e.target.value})}
+                value={addFormData.branch_id}
+                onChange={e => setAddFormData({...addFormData, branch_id: e.target.value})}
               >
-                {branches.map((b: { id: string, name: string }) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="4-Digit PIN*" type="password" maxLength={4} required value={formData.pin} onChange={e => setFormData({...formData, pin: e.target.value})} />
-            <Input label="Temporary Password*" type="password" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+            <Input label="Initial 4-Digit PIN*" type="password" maxLength={4} required value={addFormData.pin} onChange={e => setAddFormData({...addFormData, pin: e.target.value})} />
+            <div className="relative">
+                <Input label="Temporary Password*" type="text" required value={addFormData.password} onChange={e => setAddFormData({...addFormData, password: e.target.value})} />
+                <button type="button" onClick={generatePassword} className="absolute right-3 bottom-3 text-[9px] font-black text-brand-green uppercase hover:underline">Auto-Gen</button>
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit">Create Account</Button>
+            <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={loading}>Create Account</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Success Summary Modal */}
+      <Modal isOpen={isSuccessModalOpen} onClose={() => setIsSuccessModalOpen(false)} title="User Created Successfully" size="sm">
+        <div className="space-y-6">
+            <p className="text-xs text-gray-500 font-medium">Share these login details with <span className="font-black text-brand-dark">{createdUserDetails?.full_name}</span>:</p>
+            <div className="space-y-3">
+                {[
+                    { label: 'Email', value: createdUserDetails?.email },
+                    { label: 'Password', value: createdUserDetails?.password },
+                    { label: 'PIN', value: createdUserDetails?.pin },
+                    { label: 'App URL', value: createdUserDetails?.url }
+                ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 group">
+                        <div className="min-w-0">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{item.label}</p>
+                            <p className="text-xs font-bold text-brand-dark truncate">{item.value}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(item.value || '', item.label)} className="p-2 text-brand-green opacity-0 group-hover:opacity-100 transition-opacity"><Plus size={14} /></button>
+                    </div>
+                ))}
+            </div>
+            <Button onClick={() => setIsSuccessModalOpen(false)} className="w-full">Done</Button>
+        </div>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit User Profile" size="md">
+        <form onSubmit={handleUpdateProfile} className="space-y-6">
+          <Input label="Full Name*" required value={editFormData.full_name} onChange={e => setEditFormData({...editFormData, full_name: e.target.value})} />
+          <div className="grid grid-cols-2 gap-4">
+             <Input label="Phone Number" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} />
+             <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">System Role</label>
+              <select 
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                value={editFormData.role}
+                onChange={e => setEditFormData({...editFormData, role: e.target.value})}
+              >
+                {ROLES.filter(r => r.value !== 'admin').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Branch Access</label>
+            <select 
+              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+              value={editFormData.branch_id}
+              onChange={e => setEditFormData({...editFormData, branch_id: e.target.value})}
+            >
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
+            <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={loading}>Save Changes</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reset PIN Modal */}
+      <Modal isOpen={isPinModalOpen} onClose={() => setIsPinModalOpen(false)} title={`Reset PIN for ${selectedUser?.full_name}`} size="sm">
+        <form onSubmit={handleResetPin} className="space-y-6">
+            <Input label="New 4-Digit PIN*" type="password" maxLength={4} required value={pinData.pin} onChange={e => setPinData({...pinData, pin: e.target.value})} />
+            <Input label="Confirm New PIN*" type="password" maxLength={4} required value={pinData.confirmPin} onChange={e => setPinData({...pinData, confirmPin: e.target.value})} />
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
+                <Button type="button" variant="ghost" onClick={() => setIsPinModalOpen(false)}>Cancel</Button>
+                <Button type="submit" loading={loading}>Update PIN</Button>
+            </div>
+        </form>
+      </Modal>
+
+      {/* Deactivate/Activate Confirmation Modal */}
+      <Modal isOpen={isDeactivateModalOpen} onClose={() => setIsDeactivateModalOpen(false)} title={`${selectedUser?.is_active ? 'Deactivate' : 'Activate'} User`} size="sm">
+        <div className="space-y-6">
+            <div className="p-4 bg-red-50 rounded-2xl">
+                <p className="text-xs text-red-600 font-bold leading-relaxed">
+                    {selectedUser?.is_active 
+                        ? `Are you sure you want to deactivate ${selectedUser?.full_name}? They will no longer be able to log in to the system.`
+                        : `Are you sure you want to reactivate ${selectedUser?.full_name}? They will regain access to the system.`
+                    }
+                </p>
+            </div>
+            <div className="flex justify-end gap-3">
+                <Button type="button" variant="ghost" onClick={() => setIsDeactivateModalOpen(false)}>Cancel</Button>
+                <Button 
+                    onClick={() => handleToggleStatus(selectedUser)} 
+                    loading={loading}
+                    variant={selectedUser?.is_active ? 'danger' : 'primary'}
+                >
+                    Confirm {selectedUser?.is_active ? 'Deactivation' : 'Activation'}
+                </Button>
+            </div>
+        </div>
       </Modal>
     </div>
   );

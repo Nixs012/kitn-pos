@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     );
 
     const body = await req.json();
-    const { email, password, full_name, role, branch_id, tenant_id, pin } = body;
+    const { email, password, full_name, role, branch_id, tenant_id, pin, phone } = body;
 
     if (!email || !password || !full_name || !tenant_id || !pin) {
       return NextResponse.json({ error: 'Missing required fields (Email, Password, Name, Tenant, PIN)' }, { status: 400 });
@@ -39,6 +39,8 @@ export async function POST(req: Request) {
         branch_id,
         role,
         full_name,
+        email,
+        phone,
         pin_hash: pin, // In production, bcrypt this
         is_active: true
       });
