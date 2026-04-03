@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/stores/cartStore';
+import { checkStockAndNotify, createNotification } from '@/lib/notifications/notificationActions';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
@@ -254,11 +255,23 @@ export default function PosPage() {
 
         // Update Inventory
         const currentStock = products.find(p => p.id === item.id)?.inventory?.[0]?.quantity || 0;
-        await supabase
+      const { data: updatedInventory, error: invError } = await supabase
           .from('inventory')
           .update({ quantity: currentStock - item.quantity })
           .eq('product_id', item.id)
-          .eq('branch_id', branchId);
+          .eq('branch_id', branchId)
+          .select('quantity, reorder_level')
+          .single();
+
+        if (!invError && updatedInventory) {
+          await checkStockAndNotify(
+            item.id,
+            item.name,
+            Number(updatedInventory.quantity),
+            Number(updatedInventory.reorder_level),
+            tenantId
+          );
+        }
 
         // Add Stock Movement
         await supabase.from('stock_movements').insert({
@@ -270,6 +283,15 @@ export default function PosPage() {
           created_by: user?.id
         });
       }
+
+      // Generate Sale Notification
+      await createNotification({
+        tenantId,
+        userId: user?.id,
+        type: 'sale',
+        title: 'New Sale',
+        message: `New sale ${receiptNumber} — KES ${totals.total.toLocaleString()} by ${profile.full_name || 'Cashier'}`
+      });
 
       setLastSale({ ...sale, items });
       setIsCashModalOpen(false);

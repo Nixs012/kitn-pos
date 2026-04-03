@@ -10,7 +10,8 @@ import {
   Tag, 
   Filter,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Calendar
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -29,6 +30,8 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import { toast } from 'sonner';
+import { useUserStore } from '@/stores/userStore';
+import { createNotification } from '@/lib/notifications/notificationActions';
 
 type DateRange = 'today' | 'week' | 'month' | 'year' | 'custom';
 
@@ -98,6 +101,42 @@ export default function FinancePage() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
 
   const supabase = createClient();
+  const { profile } = useUserStore();
+
+  const generateDailySummary = async () => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      setLoading(true);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const { data: todaySales, error } = await supabase
+        .from('sales')
+        .select('total_amount')
+        .gte('created_at', today.toISOString());
+
+      if (error) throw error;
+
+      const totalRevenue = todaySales.reduce((acc, sale) => acc + Number(sale.total_amount), 0);
+      const transactionCount = todaySales.length;
+
+      await createNotification({
+        tenantId: profile.tenant_id,
+        userId: profile.id,
+        type: 'summary',
+        title: 'Daily Sales Summary',
+        message: `Today's total: KES ${totalRevenue.toLocaleString()} from ${transactionCount} transactions`
+      });
+
+      toast.success('Daily summary generated and notified!');
+    } catch (err) {
+      console.error('Error generating summary:', err);
+      toast.error('Failed to generate daily summary');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchInitialInfo = useCallback(async () => {
     try {
@@ -284,6 +323,15 @@ export default function FinancePage() {
               </button>
             ))}
           </div>
+
+          <button 
+            onClick={generateDailySummary}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-3.5 bg-brand-dark text-white rounded-[22px] text-[10px] font-black uppercase tracking-widest hover:bg-brand-dark/90 transition-all shadow-lg shadow-brand-dark/10 disabled:opacity-50"
+          >
+            <Calendar size={14} />
+            End Day Summary
+          </button>
         </div>
       </div>
 

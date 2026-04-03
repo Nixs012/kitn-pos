@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import Sidebar from '@/components/layout/Sidebar';
 import PageTransition from '@/components/layout/PageTransition';
 import NavigationProgress from '@/components/layout/NavigationProgress';
+import NotificationBell from '@/components/layout/NotificationBell';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import KitnLogo from '@/components/ui/KitnLogo';
 import { UserHydrator } from '@/components/auth/UserHydrator';
@@ -66,6 +67,7 @@ export default async function DashboardLayout({
               <div className="w-2 h-2 rounded-full bg-brand-green shadow-[0_0_8px_#1D9E75] group-hover:animate-ping" />
               <span className="text-[10px] font-black text-brand-green tracking-[0.15em] uppercase">Branch Server Online</span>
             </div>
+            <NotificationBell />
             
             <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:text-brand-dark transition-colors cursor-pointer">
               <KitnLogo size="sm" />
