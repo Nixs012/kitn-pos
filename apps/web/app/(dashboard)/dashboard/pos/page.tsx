@@ -23,6 +23,8 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+
 
 // --- Types ---
 
@@ -156,6 +158,20 @@ export default function PosPage() {
   // M-Pesa Integration States
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [isWaitingForMpesa, setIsWaitingForMpesa] = useState(false);
+
+  // Global Barcode Scanner Listener
+  useBarcodeScanner({
+    onScan: (code) => {
+      const product = products.find(p => p.barcode === code || p.sku === code);
+      if (product) {
+        addItem(product);
+        toast.success(`Success: ${product.name} added to cart`);
+      } else {
+        toast.error(`Unrecognized barcode: ${code}`);
+      }
+    }
+  });
+
 
   const fetchInitialData = useCallback(async () => {
     try {
@@ -467,15 +483,27 @@ export default function PosPage() {
             </div>
           </div>
 
-          {isScannerOpen && (
-            <div className="lg:absolute lg:top-full lg:left-0 lg:mt-4 z-50 w-full animate-in zoom-in duration-200">
+          {/* Camera Scanner Modal */}
+          <Modal 
+            isOpen={isScannerOpen} 
+            onClose={() => setIsScannerOpen(false)}
+            title="Scan Product Barcode"
+            size="md"
+          >
+            <div className="p-2">
               <BarcodeScanner 
                 onScan={handleBarcodeScan} 
                 onClose={() => setIsScannerOpen(false)}
                 isBulkMode={true}
               />
+              <div className="mt-6 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">
+                  Point the camera at a product barcode to scan
+                </p>
+              </div>
             </div>
-          )}
+          </Modal>
+
             
           <div className="flex gap-2 bg-white/50 p-1.5 rounded-[24px] border border-gray-100 overflow-x-auto scrollbar-hide">
             {categories.map(cat => (

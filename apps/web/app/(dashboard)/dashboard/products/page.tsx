@@ -19,6 +19,8 @@ import {
 import { toast } from 'sonner';
 import Image from 'next/image';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+
 
 // Components
 import Button from '@/components/ui/Button';
@@ -85,6 +87,22 @@ export default function ProductsPage() {
     initial_stock: 0,
     image_url: ''
   });
+
+  // Global Barcode Scanner Listener
+  useBarcodeScanner({
+    onScan: (code) => {
+      if (isAddModalOpen || isEditModalOpen) {
+        // If adding/editing, fill the barcode field
+        setFormData(prev => ({ ...prev, barcode: code }));
+        toast.success(`Barcode detected: ${code}`);
+      } else {
+        // Otherwise, use it to search the catalog
+        setSearch(code);
+        toast.success(`Searching for: ${code}`);
+      }
+    }
+  });
+
 
   const fetchProducts = useCallback(async (tenantId?: string) => {
     try {
