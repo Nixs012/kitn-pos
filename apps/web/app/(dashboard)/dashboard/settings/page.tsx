@@ -60,7 +60,7 @@ export default function SettingsPage() {
   const supabase = createClient();
   const [activeTab, setActiveTab] = useState<'store' | 'users' | 'devices'>('store');
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<{ id: string; role: string; tenant_id: string } | null>(null);
+  const [profile, setProfile] = useState<{ id: string; role: string; tenant_id: string; branch_id?: string } | null>(null);
   const [tenant, setTenant] = useState<{ 
     id: string; 
     name: string; 
@@ -171,7 +171,14 @@ export default function SettingsPage() {
       <div className="bg-white rounded-[24px] border-[0.5px] border-gray-200 shadow-sm overflow-hidden">
 
 
-        {activeTab === 'store' && tenant && <StoreSettingsTab tenant={tenant} onUpdate={fetchAllData} />}
+        {activeTab === 'store' && tenant && (
+          <StoreSettingsTab 
+            tenant={tenant} 
+            profile={profile}
+            branches={branches}
+            onUpdate={fetchAllData} 
+          />
+        )}
         {activeTab === 'users' && <UsersTab users={users} branches={branches} profile={profile} onUpdate={fetchAllData} />}
         {activeTab === 'devices' && <DevicesTab />}
       </div>
@@ -192,7 +199,7 @@ const TabButton = ({ active, children, onClick, icon }: { active: boolean, child
   </button>
 );
 
-const StoreSettingsTab = ({ tenant, onUpdate }: { 
+const StoreSettingsTab = ({ tenant, profile, branches, onUpdate }: { 
   tenant: { 
     id: string; 
     name: string; 
@@ -203,8 +210,11 @@ const StoreSettingsTab = ({ tenant, onUpdate }: {
     address?: string; 
     receipt_footer?: string; 
     vat_number?: string; 
-    logo_url?: string 
-  }, 
+    logo_url?: string;
+    subscription_tier?: string;
+  },
+  profile: { id: string; role: string; tenant_id: string; branch_id?: string } | null,
+  branches: Array<{ id: string; name: string }>,
   onUpdate: () => void 
 }) => {
   const supabase = createClient();
@@ -248,27 +258,37 @@ const StoreSettingsTab = ({ tenant, onUpdate }: {
             General Information
             <div className="h-[1px] flex-1 bg-gray-100" />
           </h3>
-          <Input label="Store Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Store Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            <Input label="Tenant ID" value={tenant.id} disabled className="bg-gray-50 opacity-80 font-mono text-[10px]" />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Business Type</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-black text-brand-dark outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={formData.business_type}
                 onChange={e => setFormData({...formData, business_type: e.target.value})}
               >
-                {['supermarket','grocery','wholesale','retail','shop'].map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                {['supermarket','grocery','wholesale','retail','shop'].map(t => <option key={t} value={t} className="text-brand-dark font-bold">{t.toUpperCase()}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">County</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-black text-brand-dark outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={formData.county}
                 onChange={e => setFormData({...formData, county: e.target.value})}
               >
-                {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {COUNTIES.map(c => <option key={c} value={c} className="text-brand-dark font-bold">{c}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Subscription Tier</label>
+            <div className="flex items-center gap-2 p-3 bg-brand-green/5 border border-brand-green/10 rounded-xl">
+              <Badge variant="success">{tenant.subscription_tier || 'FREE PLAN'}</Badge>
+              <span className="text-[10px] font-bold text-gray-400 capitalize">Active since March 2024</span>
             </div>
           </div>
         </div>
@@ -323,8 +343,41 @@ const StoreSettingsTab = ({ tenant, onUpdate }: {
 
         <div className="space-y-6">
           <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest flex items-center gap-2">
-            Receipt Customization
+            Access & Connected Outlet
+            <div className="h-[1px] flex-1 bg-gray-100" />
+          </h3>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="p-4 bg-gray-50 rounded-2xl space-y-3 border border-gray-100">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Active Branch</p>
+                        <p className="text-sm font-black text-brand-dark">
+                            {branches.find(b => b.id === profile?.branch_id)?.name || "Main Branch — Nairobi CBD"}
+                        </p>
+                    </div>
+                    <Badge variant="info">Online</Badge>
+                </div>
+                <div className="h-[1px] bg-gray-200/50" />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Admin Account</p>
+                        <p className="text-[11px] font-bold text-gray-600">admin@kitnpos.co.ke</p>
+                    </div>
+                    <div>
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Security PIN</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-[11px] font-black text-brand-green tracking-[0.2em]">••••</p>
+                            <button type="button" className="text-[8px] font-black text-brand-green uppercase hover:underline">Show</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
 
+        <div className="space-y-6">
+          <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest flex items-center gap-2">
+            Receipt Customization
             <div className="h-[1px] flex-1 bg-gray-100" />
           </h3>
           <div className="space-y-1.5">
