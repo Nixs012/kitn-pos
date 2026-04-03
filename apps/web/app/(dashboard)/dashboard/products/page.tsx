@@ -493,7 +493,7 @@ export default function ProductsPage() {
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Category</label>
             <select 
-              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
+              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
               value={formData.category}
               onChange={e => setFormData({...formData, category: e.target.value})}
             >
@@ -526,7 +526,7 @@ export default function ProductsPage() {
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">VAT Rate</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
                 value={formData.vat_rate}
                 onChange={e => setFormData({...formData, vat_rate: Number(e.target.value)})}
               >
@@ -537,7 +537,7 @@ export default function ProductsPage() {
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Unit</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
                 value={formData.unit}
                 onChange={e => setFormData({...formData, unit: e.target.value})}
               >

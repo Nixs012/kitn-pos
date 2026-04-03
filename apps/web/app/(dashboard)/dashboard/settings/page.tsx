@@ -711,7 +711,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">System Role</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={addFormData.role}
                 onChange={e => setAddFormData({...addFormData, role: e.target.value})}
               >
@@ -721,7 +721,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Branch Access</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={addFormData.branch_id}
                 onChange={e => setAddFormData({...addFormData, branch_id: e.target.value})}
               >
@@ -776,7 +776,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
              <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">System Role</label>
               <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={editFormData.role}
                 onChange={e => setEditFormData({...editFormData, role: e.target.value})}
               >
@@ -787,7 +787,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Branch Access</label>
             <select 
-              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-medium outline-none border focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
+              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
               value={editFormData.branch_id}
               onChange={e => setEditFormData({...editFormData, branch_id: e.target.value})}
             >

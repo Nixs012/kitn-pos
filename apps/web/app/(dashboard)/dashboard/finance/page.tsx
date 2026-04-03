@@ -63,7 +63,7 @@ const MetricCard = ({ title, value, subValue, icon: Icon, trend, prefix = "KES "
       <p className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] mb-4">{title}</p>
       <div className="flex items-baseline gap-2">
         <h3 className="text-3xl font-black text-brand-dark tracking-tighter">
-          <span className="text-sm font-bold text-gray-300 mr-1">{prefix}</span>
+          <span className="text-sm font-bold text-gray-400 mr-1">{prefix}</span>
           {value.toLocaleString()}
         </h3>
         {trend && (
@@ -264,7 +264,7 @@ export default function FinancePage() {
             <select 
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-4 py-2 bg-transparent text-xs font-black uppercase tracking-widest text-gray-400 focus:outline-none border-none cursor-pointer"
+              className="px-4 py-2 bg-transparent text-xs font-black uppercase tracking-widest text-brand-dark focus:outline-none border-none cursor-pointer"
             >
               <option value="all">All Branches</option>
               {branches.map(b => (
