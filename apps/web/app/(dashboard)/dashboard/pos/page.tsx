@@ -14,6 +14,7 @@ import {
   Printer,
   ShoppingCart
 } from 'lucide-react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/stores/cartStore';
 import { checkStockAndNotify, createNotification } from '@/lib/notifications/notificationActions';
@@ -21,6 +22,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
+import BarcodeScanner from '@/components/pos/BarcodeScanner';
 
 // --- Types ---
 
@@ -39,6 +41,7 @@ interface Product {
   inventory?: Inventory[];
   vat_rate: number;
   barcode: string | null;
+  image_url?: string | null;
   [key: string]: unknown;
 }
 
@@ -98,8 +101,12 @@ const ProductCard = ({ product, onAdd }: { product: Product, onAdd: (p: Product)
       )}
       
       <div className="flex justify-between items-start mb-4">
-        <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 group-hover:scale-110 transition-transform duration-500">
-          <Package size={24} />
+        <div className="w-full aspect-square rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 group-hover:scale-105 transition-transform duration-500 overflow-hidden border border-gray-50 relative">
+          {product.image_url ? (
+            <Image src={product.image_url} alt={product.name} fill className="object-cover" unoptimized />
+          ) : (
+            <Package size={32} />
+          )}
         </div>
         {isLowStock && !isOutOfStock && (
           <Badge variant="warning" className="text-[9px] font-black uppercase tracking-tighter bg-orange-100 text-orange-700">Low</Badge>
@@ -144,6 +151,7 @@ export default function PosPage() {
   const [lastSale, setLastSale] = useState<(Sale & { items: SaleItem[] }) | null>(null);
   const [cashReceived, setCashReceived] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // M-Pesa Integration States
   const [mpesaPhone, setMpesaPhone] = useState('');
@@ -193,6 +201,26 @@ export default function PosPage() {
     const matchesCategory = category === 'All' || p.category === category;
     return matchesSearch && matchesCategory;
   });
+
+  const handleBarcodeScan = (code: string) => {
+    const product = products.find(p => p.barcode === code || p.sku === code);
+    if (product) {
+      addItem(product);
+      toast.success(`Added ${product.name} to cart`);
+    } else {
+      toast.error(`Product with barcode ${code} not found`);
+    }
+  };
+
+  const handleManualSearch = () => {
+    // Search is already filtered by the state 'search', 
+    // but we can provide feedback or scroll to results
+    if (filteredProducts.length === 0) {
+      toast.info("No products found for this search");
+    } else {
+      toast.success(`Found ${filteredProducts.length} results`);
+    }
+  };
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -406,14 +434,39 @@ export default function PosPage() {
               <input 
                 type="text" 
                 placeholder="Search product or scan barcode..."
-                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-6 py-5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-brand-green/20"
+                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-32 py-5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-brand-green/20"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
               />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-brand-green hover:text-white transition-all">
-                <Camera size={20} />
-              </button>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleManualSearch}
+                  className="rounded-xl px-4 py-2 text-[10px] uppercase font-black tracking-widest hidden md:flex"
+                >
+                  Search
+                </Button>
+                <button 
+                  onClick={() => setIsScannerOpen(!isScannerOpen)}
+                  className={`p-3 rounded-2xl transition-all ${
+                    isScannerOpen ? 'bg-brand-coral text-white' : 'bg-gray-50 text-gray-400 hover:bg-brand-green hover:text-white'
+                  }`}
+                >
+                  {isScannerOpen ? <X size={20} /> : <Camera size={20} />}
+                </button>
+              </div>
             </div>
+
+            {isScannerOpen && (
+              <div className="lg:absolute lg:top-full lg:left-0 lg:mt-4 z-50 w-full">
+                <BarcodeScanner 
+                  onScan={handleBarcodeScan} 
+                  onClose={() => setIsScannerOpen(false)}
+                  isBulkMode={true}
+                />
+              </div>
+            )}
             
             <div className="flex gap-2 bg-white/50 p-1.5 rounded-[24px] border border-gray-100 overflow-x-auto scrollbar-hide">
               {categories.map(cat => (
