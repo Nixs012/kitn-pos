@@ -1,0 +1,34 @@
+﻿node.exe : 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Users\Nixon\AppData
+\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : 
+NotSpecified: (:    
+String) [], RemoteExc  
+  eption
+    + 
+FullyQualifiedError    
+Id : NativeCommandErr  
+  or
+ 
+./app/api/users/update/
+route.ts
+21:38  Error: 
+Unexpected any. 
+Specify a different 
+type.  @typescript-esli
+nt/no-explicit-any
+
+info  - Need to 
+disable some ESLint 
+rules? Learn more 
+here: https://nextjs.or
+g/docs/basic-features/e
+slint#disabling-rules
