@@ -42,19 +42,18 @@ export default function BarcodeScanner({
     scannerRef.current = html5QrCode;
 
     const config = {
-      fps: 25, // Increased for faster detection
+      fps: 30, // Maximum responsiveness
       qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-        // Larger, more flexible scan area for better focus
         const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
         const boxSize = Math.floor(minEdge * 0.8);
         return {
           width: boxSize,
-          height: Math.floor(boxSize * 0.6) // Barcode-optimized rectangle
+          height: Math.floor(boxSize * 0.6)
         };
       },
       aspectRatio: 1.0,
       experimentalFeatures: {
-        useBarCodeDetectorIfSupported: true // Use native browser API if available (faster)
+        useBarCodeDetectorIfSupported: true
       },
       formatsToSupport: [ 
         Html5QrcodeSupportedFormats.EAN_13, 
@@ -74,7 +73,8 @@ export default function BarcodeScanner({
         (decodedText) => {
           onScan(decodedText);
           if (!isBulkMode) {
-            onClose();
+            // Tiny delay to allow the user to see the success state
+            setTimeout(() => onClose(), 300);
           }
         },
         undefined
@@ -104,6 +104,24 @@ export default function BarcodeScanner({
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden w-full max-w-sm mx-auto animate-in zoom-in duration-300">
+      <style jsx>{`
+        @keyframes scan {
+          0% { top: 0%; }
+          50% { top: 100%; }
+          100% { top: 0%; }
+        }
+        .scan-line {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: #10b981;
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);
+          animation: scan 2s linear infinite;
+          z-index: 10;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
         <div className="flex items-center gap-2">
@@ -121,19 +139,21 @@ export default function BarcodeScanner({
       </div>
 
       {/* Camera View */}
-      <div className="relative aspect-square bg-black">
+      <div className="relative aspect-square bg-black overflow-hidden">
         <div id={regionId} className="w-full h-full" />
         {!isScannerRunning && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center space-y-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center space-y-4 z-20 bg-black">
              <RefreshCw className="animate-spin text-brand-green" size={32} />
              <p className="text-xs font-bold font-mono tracking-tighter opacity-70 italic">Initializing vision system...</p>
           </div>
         )}
         
         {/* Decorative scan overlay */}
-        <div className="absolute inset-0 border-[40px] border-black/20 pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-32 border-2 border-brand-green/50 rounded-lg pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[2px] bg-brand-green shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse" />
+        <div className="absolute inset-0 border-[40px] border-black/20 pointer-events-none z-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-32 border-2 border-brand-green/50 rounded-lg pointer-events-none z-10">
+          {/* Animated Scan Line - Now restricted to the box */}
+          <div className="scan-line" />
+        </div>
       </div>
 
       {/* Controls */}

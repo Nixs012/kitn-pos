@@ -428,18 +428,27 @@ export default function PosPage() {
         <div className={`flex-1 flex flex-col gap-6 min-w-0 ${showMobileCart ? 'hidden lg:flex' : 'flex'}`}>
           
           {/* Search & Scan */}
-          <div className="flex flex-col md:flex-row gap-4 shrink-0">
-            <div className="flex-1 relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <div className="flex flex-col md:flex-row gap-4 shrink-0 px-2 lg:px-0">
+            <div className="flex-1 relative group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-green transition-colors" size={20} />
               <input 
                 type="text" 
                 placeholder="Search product or scan barcode..."
-                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-32 py-5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-brand-green/20"
+                className="w-full bg-white border border-gray-100 rounded-[24px] pl-14 pr-32 py-5 text-sm font-bold text-brand-dark shadow-sm outline-none focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleManualSearch()}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {search && (
+                  <button 
+                    onClick={() => setSearch('')}
+                    className="p-2 text-gray-400 hover:text-brand-coral transition-all mr-1"
+                    title="Clear search"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
                 <Button 
                   size="sm" 
                   onClick={handleManualSearch}
@@ -449,11 +458,12 @@ export default function PosPage() {
                 </Button>
                 <button 
                   onClick={() => setIsScannerOpen(!isScannerOpen)}
-                  className={`p-3 rounded-2xl transition-all ${
+                  className={`p-3 rounded-2xl transition-all shadow-sm active:scale-95 ${
                     isScannerOpen ? 'bg-brand-coral text-white' : 'bg-gray-50 text-gray-400 hover:bg-brand-green hover:text-white'
                   }`}
+                  title="Open Scanner"
                 >
-                  {isScannerOpen ? <X size={20} /> : <Camera size={20} />}
+                  <Camera size={20} />
                 </button>
               </div>
             </div>
