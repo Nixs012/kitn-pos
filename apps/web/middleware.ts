@@ -33,10 +33,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && request.nextUrl.pathname === '/login') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+  if (user) {
+    // Check if tenant is suspended
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('tenant_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.tenant_id && !request.nextUrl.pathname.startsWith('/superadmin')) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('suspended')
+        .eq('id', profile.tenant_id)
+        .single()
+      
+      if (tenant?.suspended && !request.nextUrl.pathname.startsWith('/suspended')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/suspended'
+        return NextResponse.redirect(url)
+      }
+    }
+
+    if (request.nextUrl.pathname === '/login') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
