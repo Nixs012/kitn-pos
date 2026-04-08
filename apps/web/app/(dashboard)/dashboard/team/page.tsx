@@ -219,7 +219,12 @@ export default function TeamPerformancePage() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Action failed';
       console.error('Fetch error:', err);
-      toast.error(errorMessage);
+      // Show more detailed error if it comes from Supabase
+      if (typeof err === 'object' && err !== null && 'message' in err) {
+        toast.error(`Database Error: ${String((err as { message: unknown }).message)}`);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -259,7 +264,11 @@ export default function TeamPerformancePage() {
       fetchData();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Action failed';
-      toast.error(errorMessage);
+      if (typeof err === 'object' && err !== null && 'message' in err) {
+        toast.error(`Clock Action Error: ${String((err as { message: unknown }).message)}`);
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
