@@ -15,6 +15,9 @@ A step-by-step guide for store owners and staff on how to use every feature from
 ### 🎓 [Training Guide](./training_guide.md)
 Instructions for trainers on how to onboard new users to the system, including a training checklist.
 
+### 🚀 [Automation Roadmap](./automation_roadmap.md)
+A strategic plan identifying manual processes that can be automated in future development phases.
+
 ### 🛠️ [Technical API Reference](./api_reference.md)
 Documentation for developers on API types, data schemas, and integration patterns (Supabase, MPesa, TIMS).
 
