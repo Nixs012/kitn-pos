@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { X, DollarSign, TrendingUp, Hash, Clock, FileText } from 'lucide-react';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Image from 'next/image';
 
 interface ActivityDrawerProps {
