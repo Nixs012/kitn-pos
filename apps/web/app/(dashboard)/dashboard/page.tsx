@@ -12,6 +12,8 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
+import Link from 'next/link';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 // Types
 interface StatCardProps {
@@ -35,25 +37,30 @@ interface Transaction {
   created_at: string;
 }
 
-const StatCard = ({ label, value, icon, trend, isAlert }: StatCardProps) => (
-  <div className="bg-white p-5 rounded-[12px] border-[0.5px] border-[#E8E8E8] shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-2.5 rounded-xl ${isAlert && Number(value) > 0 ? 'bg-red-50 text-red-500' : 'bg-brand-green/10 text-brand-green'}`}>
-        {icon}
-      </div>
-      {trend && (
-        <div className={`flex items-center text-[10px] font-bold ${trend.positive ? 'text-green-500' : 'text-red-500'}`}>
-          {trend.positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-          {trend.value}
+const StatCard = ({ label, value, icon, trend, isAlert, href }: StatCardProps & { href?: string }) => {
+  const content = (
+    <div className="bg-white p-5 rounded-[12px] border-[0.5px] border-[#E8E8E8] shadow-sm hover:shadow-md transition-shadow h-full">
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-2.5 rounded-xl ${isAlert && Number(value) > 0 ? 'bg-red-50 text-red-500' : 'bg-brand-green/10 text-brand-green'}`}>
+          {icon}
         </div>
-      )}
+        {trend && (
+          <div className={`flex items-center text-[10px] font-bold ${trend.positive ? 'text-green-500' : 'text-red-500'}`}>
+            {trend.positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+            {trend.value}
+          </div>
+        )}
+      </div>
+      <p className="text-gray-500 text-xs font-medium mb-1">{label}</p>
+      <h3 className={`text-xl font-black tracking-tight ${isAlert && Number(value) > 0 ? 'text-red-600' : 'text-brand-dark'}`}>
+        {label.includes('KES') ? `KES ${Number(value).toLocaleString()}` : value}
+      </h3>
     </div>
-    <p className="text-gray-500 text-xs font-medium mb-1">{label}</p>
-    <h3 className={`text-xl font-black tracking-tight ${isAlert && Number(value) > 0 ? 'text-red-600' : 'text-brand-dark'}`}>
-      {label.includes('KES') ? `KES ${Number(value).toLocaleString()}` : value}
-    </h3>
-  </div>
-);
+  );
+
+  if (href) return <Link href={href} className="block group">{content}</Link>;
+  return content;
+};
 
 const PaymentBadge = ({ method }: { method: Transaction['payment_method'] }) => {
   const styles = {
@@ -154,6 +161,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData();
+    document.title = 'Dashboard — KiTN POS';
 
     // Real-time subscription for new sales
     const channel = supabase
@@ -187,7 +195,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <Breadcrumbs items={[{ label: 'Home' }]} />
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
@@ -211,6 +220,7 @@ export default function DashboardPage() {
           value={stats.lowStock} 
           icon={<AlertTriangle size={20} />} 
           isAlert
+          href="/dashboard/inventory"
         />
       </div>
 
@@ -267,17 +277,24 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {recentSales.length > 0 ? recentSales.map((sale) => (
-                  <tr key={sale.id} className="group hover:bg-gray-50 transition-colors">
-                    <td className="py-3">
-                      <p className="text-xs font-bold text-brand-dark">{sale.receipt_number}</p>
-                      <p className="text-[9px] text-gray-400 flex items-center gap-1">
-                        <Clock size={10} /> {new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                  <tr key={sale.id} className="group hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/dashboard/reports/sales?receipt=${sale.receipt_number}`}>
+                    <td className="py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-brand-green/5 flex items-center justify-center text-brand-green">
+                           <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-brand-dark">{sale.receipt_number}</p>
+                          <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                            <Clock size={10} /> {new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-3">
+                    <td className="py-4">
                       <PaymentBadge method={sale.payment_method} />
                     </td>
-                    <td className="py-3 text-right">
+                    <td className="py-4 text-right">
                       <p className="text-xs font-black text-brand-dark">KES {Number(sale.total_amount).toLocaleString()}</p>
                     </td>
                   </tr>

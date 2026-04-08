@@ -30,6 +30,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import { toast } from 'sonner';
+import { Breadcrumbs, UpgradePrompt } from '@/components/ui/Breadcrumbs';
 import { useUserStore } from '@/stores/userStore';
 import { createNotification } from '@/lib/notifications/notificationActions';
 
@@ -99,6 +100,7 @@ export default function FinancePage() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
 
   const supabase = createClient();
   const { profile } = useUserStore();
@@ -156,6 +158,14 @@ export default function FinancePage() {
           .select('id, name')
           .eq('tenant_id', profile.tenant_id);
         if (branchesData) setBranches(branchesData);
+
+        // Fetch subscription tier
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('subscription_tier')
+          .eq('id', profile.tenant_id)
+          .single();
+        if (tenantData) setSubscriptionTier(tenantData.subscription_tier);
       }
     } catch (error) {
       console.error('Initial Info Error:', error);
@@ -287,10 +297,28 @@ export default function FinancePage() {
 
   useEffect(() => {
     fetchFinanceData();
+    document.title = 'Finance — KiTN POS';
   }, [fetchFinanceData]);
+
+  if (subscriptionTier === 'free' || !subscriptionTier) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-brand-dark tracking-tighter leading-none mb-3">Finance Dashboard</h1>
+          <p className="text-gray-500 font-medium italic">Comprehensive oversight of your business health and profitability.</p>
+        </div>
+        <UpgradePrompt 
+          title="Finance Analytics Locked" 
+          feature="Profit margins, COGS analysis, and tax reporting are available on Basic and Pro plans."
+          plan="Basic"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <Breadcrumbs items={[{ label: 'Home', href: '/dashboard' }, { label: 'Finance' }]} />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

@@ -30,6 +30,7 @@ import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 type DateRange = 'today' | 'week' | 'month' | 'custom';
 
@@ -206,6 +207,7 @@ export default function SalesReportsPage() {
 
   useEffect(() => {
     fetchSalesData();
+    document.title = 'Sales Reports — KiTN POS';
   }, [fetchSalesData]);
 
   const exportCSV = () => {
@@ -244,6 +246,7 @@ export default function SalesReportsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-12">
+      <Breadcrumbs items={[{ label: 'Home', href: '/dashboard' }, { label: 'Reports', href: '/dashboard/reports/sales' }, { label: 'Sales' }]} />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

@@ -11,6 +11,7 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
+  metadata?: Record<string, unknown>;
   is_read: boolean;
   created_at: string;
 }
@@ -110,6 +111,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         unreadCount: updated.filter(n => !n.is_read).length
       };
     });
+
+    // Custom sound alert for sales
+    if (notification.type === 'sale') {
+      try {
+        const audio = new Audio('/sounds/sale_alert.mp3');
+        audio.play().catch(() => {}); // Play silently if possible
+      } catch {}
+    }
   },
 
   subscribeToNotifications: (tenantId: string) => {

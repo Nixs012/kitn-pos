@@ -17,6 +17,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import Table from '@/components/ui/Table';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 interface InventoryItem {
   id: string; // product id
@@ -104,6 +105,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     fetchInventory();
+    document.title = 'Inventory — KiTN POS';
   }, [fetchInventory]);
 
   const handleRestock = async (e: React.FormEvent) => {
@@ -197,6 +199,7 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <Breadcrumbs items={[{ label: 'Home', href: '/dashboard' }, { label: 'Inventory' }]} />
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

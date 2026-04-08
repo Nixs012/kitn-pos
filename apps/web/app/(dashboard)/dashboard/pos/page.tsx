@@ -12,9 +12,11 @@ import {
   Smartphone,
   X,
   Printer,
-  ShoppingCart
+  ShoppingCart,
+  ExternalLink
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/stores/cartStore';
 import { checkStockAndNotify, createNotification } from '@/lib/notifications/notificationActions';
@@ -206,6 +208,7 @@ export default function PosPage() {
 
   useEffect(() => {
     fetchInitialData();
+    document.title = 'POS Terminal — KiTN POS';
   }, [fetchInitialData]);
 
   const totals = getTotals();
@@ -801,7 +804,15 @@ export default function PosPage() {
                 Close Ticket
               </Button>
             </div>
-            <p className="text-[10px] text-gray-400 font-bold uppercase text-center tracking-[0.3em] py-4">Thank you for shopping with us!</p>
+            <div className="flex justify-center flex-col items-center gap-2 py-4">
+              <Link 
+                href={`/dashboard/reports/sales?receipt=${lastSale?.receipt_number}`}
+                className="text-[10px] font-black text-brand-green uppercase tracking-widest hover:underline flex items-center gap-1"
+              >
+                View in Reports <ExternalLink size={10} />
+              </Link>
+              <p className="text-[10px] text-gray-400 font-bold uppercase text-center tracking-[0.3em]">Thank you for shopping with us!</p>
+            </div>
           </div>
         )}
       </Modal>

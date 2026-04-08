@@ -8,9 +8,10 @@ import {
   Trophy, 
   Activity, 
   ExternalLink,
+  UserPlus,
+  Download,
   Calendar,
-  ChevronRight,
-  UserPlus
+  ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,6 +25,7 @@ import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import StaffCard from '@/components/team/StaffCard';
 import ActivityDrawer from '@/components/team/ActivityDrawer';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 type FilterRange = 'today' | 'week' | 'month';
 
@@ -102,7 +104,7 @@ export default function TeamPerformancePage() {
   const [staffData, setStaffData] = useState<StaffPerformance[]>([]);
   const [shifts, setShifts] = useState<ShiftLog[]>([]);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null); 
-  const [timelineData, setTimelineData] = useState<TimelineItem[]>([]);
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);  const [timelineData, setTimelineData] = useState<TimelineItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
 
   interface TimelineItem {
@@ -216,6 +218,15 @@ export default function TeamPerformancePage() {
           ? `${Math.round((new Date(s.clock_out).getTime() - new Date(s.clock_in).getTime()) / 60000)}m`
           : `${Math.round((new Date().getTime() - new Date(s.clock_in).getTime()) / 60000)}m`
       })));
+
+      // Fetch subscription tier
+      const { data: tenantData } = await supabase
+        .from('tenants')
+        .select('subscription_tier')
+        .eq('id', profile.tenant_id)
+        .single();
+      if (tenantData) setSubscriptionTier(tenantData.subscription_tier);
+
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Action failed';
       console.error('Fetch error:', err);
@@ -232,6 +243,7 @@ export default function TeamPerformancePage() {
 
   useEffect(() => {
     fetchData();
+    document.title = 'Team Performance — KiTN POS';
   }, [fetchData]);
 
   const handleClockAction = async () => {
@@ -339,6 +351,7 @@ export default function TeamPerformancePage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+      <Breadcrumbs items={[{ label: 'Home', href: '/dashboard' }, { label: 'Team Performance' }]} />
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
@@ -369,6 +382,20 @@ export default function TeamPerformancePage() {
               <ChevronRight size={14} />
             </Button>
           </Link>
+          <Button 
+            onClick={() => {
+              if (subscriptionTier === 'free') {
+                toast.error('Detailed team reports require a Basic plan');
+                return;
+              }
+              toast.success('Report generation started...');
+            }}
+            variant="outline"
+            className="border-brand-green/30 text-brand-green hover:bg-brand-green/5 px-6 py-4 flex items-center gap-2"
+          >
+            <Download size={18} />
+            Export Report
+          </Button>
         </div>
       </div>
 

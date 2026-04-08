@@ -25,6 +25,8 @@ import Card from '@/components/ui/Card';
 import OutletCard, { OutletCardProps } from '@/components/outlets/OutletCard';
 import StockTransferModal from '@/components/outlets/StockTransferModal';
 import AddOutletModal from '@/components/outlets/AddOutletModal';
+import { toast } from 'sonner';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 const BRAND_COLORS = ['#1D9E75', '#378ADD', '#D85A30', '#8B5CF6', '#EC4899', '#F59E0B'];
 
@@ -49,6 +51,7 @@ export default function OutletsPage() {
   const [loading, setLoading] = useState(true);
   const [outlets, setOutlets] = useState<OutletCardProps[]>([]);
   const [weeklyComparison, setWeeklyComparison] = useState<{ name: string; revenue: number }[]>([]);
+  const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
   
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -130,6 +133,14 @@ export default function OutletsPage() {
         })).sort((a, b) => b.revenue - a.revenue);
         
         setWeeklyComparison(comparison);
+
+        // Fetch subscription tier
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('subscription_tier')
+          .eq('id', profile.tenant_id)
+          .single();
+        if (tenantData) setSubscriptionTier(tenantData.subscription_tier);
       }
     } catch (err) {
       console.error('Fetch error:', err);
@@ -140,6 +151,7 @@ export default function OutletsPage() {
 
   useEffect(() => {
     fetchData();
+    document.title = 'Outlets — KiTN POS';
   }, [fetchData]);
 
   if (loading) {
@@ -162,6 +174,7 @@ export default function OutletsPage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+      <Breadcrumbs items={[{ label: 'Home', href: '/dashboard' }, { label: 'Outlets' }]} />
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
@@ -178,7 +191,13 @@ export default function OutletsPage() {
 
         <div className="flex items-center gap-4">
           <Button 
-            onClick={() => setIsTransferModalOpen(true)}
+            onClick={() => {
+              if (subscriptionTier === 'free') {
+                toast.error('Multiple outlets & stock transfers require a Basic plan');
+                return;
+              }
+              setIsTransferModalOpen(true);
+            }}
             variant="outline"
             className="border-[#378ADD] text-[#378ADD] hover:bg-blue-50 px-6 py-4 flex items-center gap-2"
           >
@@ -186,7 +205,13 @@ export default function OutletsPage() {
             Transfer Stock
           </Button>
           <Button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              if (subscriptionTier === 'free') {
+                toast.error('Unlock unlimited outlets with a Basic plan');
+                return;
+              }
+              setIsAddModalOpen(true);
+            }}
             className="bg-brand-green hover:bg-brand-green/90 px-6 py-4 shadow-xl flex items-center gap-2"
           >
             <Plus size={18} />
