@@ -7,6 +7,7 @@ export interface UserProfile {
   role: string | null;
   avatar_url: string | null;
   tenant_id: string | null;
+  branch_id: string | null;
 }
 
 interface UserState {
