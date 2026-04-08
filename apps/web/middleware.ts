@@ -34,24 +34,44 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user) {
-    // Check if tenant is suspended
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('tenant_id')
-      .eq('id', user.id)
-      .single()
+    // Check if user is a superadmin first (they might not have a tenant_id)
+    const isSuperAdmin = user.email?.endsWith('@kitnpos.co.ke') || ['admin@kitnpos.co.ke'].includes(user.email || '');
 
-    if (profile?.tenant_id && !request.nextUrl.pathname.startsWith('/superadmin')) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('suspended')
-        .eq('id', profile.tenant_id)
+    if (!isSuperAdmin) {
+      // Check if tenant is suspended or if onboarding is needed
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('tenant_id')
+        .eq('id', user.id)
         .single()
-      
-      if (tenant?.suspended && !request.nextUrl.pathname.startsWith('/suspended')) {
+
+      // CASE 1: Need Onboarding
+      if (!profile?.tenant_id && !request.nextUrl.pathname.startsWith('/onboarding')) {
         const url = request.nextUrl.clone()
-        url.pathname = '/suspended'
+        url.pathname = '/onboarding'
         return NextResponse.redirect(url)
+      }
+
+      // CASE 2: Already Onboarded
+      if (profile?.tenant_id) {
+        // Prevent going back to onboarding
+        if (request.nextUrl.pathname.startsWith('/onboarding')) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/dashboard'
+          return NextResponse.redirect(url)
+        }
+
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('suspended')
+          .eq('id', profile.tenant_id)
+          .single()
+        
+        if (tenant?.suspended && !request.nextUrl.pathname.startsWith('/suspended')) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/suspended'
+          return NextResponse.redirect(url)
+        }
       }
     }
 
