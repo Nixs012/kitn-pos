@@ -115,7 +115,7 @@ export default function Sidebar() {
         </NavGroup>
 
         <NavGroup title="System">
-          <NavItem href="/dashboard/users" label="Team" icon={<UserCog size={18} />} active={pathname === '/dashboard/users'} />
+          <NavItem href="/dashboard/team" label="Team" icon={<UserCog size={18} />} active={pathname === '/dashboard/team'} />
           <NavItem href="/dashboard/branches" label="Outlets" icon={<GitBranch size={18} />} active={pathname === '/dashboard/branches'} />
           <NavItem href="/dashboard/settings" label="Settings" icon={<Settings size={18} />} active={pathname === '/dashboard/settings'} />
         </NavGroup>
