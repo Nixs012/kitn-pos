@@ -21,5 +21,15 @@ DROP POLICY IF EXISTS "allow_tenant_notifications" ON notifications;
 CREATE POLICY "allow_tenant_notifications" ON notifications 
 FOR ALL TO authenticated USING (tenant_id = (SELECT tenant_id FROM user_profiles WHERE id = auth.uid())) WITH CHECK (tenant_id = (SELECT tenant_id FROM user_profiles WHERE id = auth.uid()));
 
--- Enable Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+-- Enable Realtime safely
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'notifications'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+  END IF;
+END $$;
