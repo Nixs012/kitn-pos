@@ -13,7 +13,16 @@ import {
   Power,
   MapPin,
   Layout,
-  UserPlus
+  UserPlus,
+  ExternalLink,
+  ShieldAlert,
+  Download,
+  RefreshCw,
+  Trash2,
+  CreditCard,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,25 +65,40 @@ interface ICreationDetails {
   url: string;
 }
 
+interface ISubscription {
+  id: string;
+  plan: 'free' | 'basic' | 'pro';
+  status: 'trial' | 'active' | 'expired';
+  trial_ends_at?: string;
+  current_period_end?: string;
+  last_payment_amount?: number;
+  last_payment_date?: string;
+  last_payment_ref?: string;
+}
+
+interface ITenant {
+  id: string;
+  name: string;
+  business_type: string;
+  county: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  receipt_footer?: string;
+  vat_number?: string;
+  logo_url?: string;
+  subscription_tier?: string;
+}
+
 export default function SettingsPage() {
   const supabase = createClient();
-  const [activeTab, setActiveTab] = useState<'store' | 'users' | 'devices'>('store');
+  const [activeTab, setActiveTab] = useState<'store' | 'users' | 'devices' | 'subscription'>('store');
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<{ id: string; role: string; tenant_id: string; branch_id?: string } | null>(null);
-  const [tenant, setTenant] = useState<{ 
-    id: string; 
-    name: string; 
-    business_type: string; 
-    county: string; 
-    phone?: string; 
-    email?: string; 
-    address?: string; 
-    receipt_footer?: string; 
-    vat_number?: string; 
-    logo_url?: string 
-  } | null>(null);
+  const [tenant, setTenant] = useState<ITenant | null>(null);
   const [users, setUsers] = useState<IUserProfile[]>([]);
   const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [subscription, setSubscription] = useState<ISubscription | null>(null);
   
   // Modal states
 
@@ -124,6 +148,14 @@ export default function SettingsPage() {
       if (be) throw be;
       setBranches(branchesData || []);
 
+      // 5. Fetch Subscription
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('tenant_id', profileData.tenant_id)
+        .single();
+      setSubscription(subData);
+
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       toast.error(message);
@@ -166,6 +198,7 @@ export default function SettingsPage() {
         <TabButton active={activeTab === 'store'} onClick={() => setActiveTab('store')} icon={<Store size={14}/>}>Store Settings</TabButton>
         <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users size={14}/>}>Users & Roles</TabButton>
         <TabButton active={activeTab === 'devices'} onClick={() => setActiveTab('devices')} icon={<Smartphone size={14}/>}>Devices</TabButton>
+        <TabButton active={activeTab === 'subscription'} onClick={() => setActiveTab('subscription')} icon={<CreditCard size={14}/>}>Subscription</TabButton>
       </div>
 
       <div className="bg-white rounded-[24px] border-[0.5px] border-gray-200 shadow-sm overflow-hidden">
@@ -177,10 +210,12 @@ export default function SettingsPage() {
             profile={profile}
             branches={branches}
             onUpdate={fetchAllData} 
+            setActiveTab={setActiveTab}
           />
         )}
         {activeTab === 'users' && <UsersTab users={users} branches={branches} profile={profile} onUpdate={fetchAllData} />}
         {activeTab === 'devices' && <DevicesTab />}
+        {activeTab === 'subscription' && <SubscriptionTab subscription={subscription} tenant={tenant} onUpdate={fetchAllData} />}
       </div>
     </div>
   );
@@ -199,27 +234,100 @@ const TabButton = ({ active, children, onClick, icon }: { active: boolean, child
   </button>
 );
 
-const StoreSettingsTab = ({ tenant, profile, branches, onUpdate }: { 
-  tenant: { 
-    id: string; 
-    name: string; 
-    business_type: string; 
-    county: string; 
-    phone?: string; 
-    email?: string; 
-    address?: string; 
-    receipt_footer?: string; 
-    vat_number?: string; 
-    logo_url?: string;
-    subscription_tier?: string;
-  },
+const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }: { 
+  tenant: ITenant,
   profile: { id: string; role: string; tenant_id: string; branch_id?: string } | null,
   branches: Array<{ id: string; name: string }>,
-  onUpdate: () => void 
+  onUpdate: () => void,
+  setActiveTab: (tab: 'store' | 'users' | 'devices' | 'subscription') => void
 }) => {
   const supabase = createClient();
-  const [formData, setFormData] = useState(tenant || {});
+  const [formData, setFormData] = useState<Partial<ITenant>>(tenant || {});
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleExportData = async () => {
+    try {
+      const { data: sales, error } = await supabase
+        .from('sales')
+        .select('*, branches!inner(tenant_id), user_profiles(full_name)')
+        .eq('branches.tenant_id', tenant.id);
+      
+      if (error) throw error;
+      
+      const csvContent = [
+        ['Date', 'Branch', 'Cashier', 'Receipt', 'Amount', 'Payment Method'].join(','),
+        ...(sales || []).map(s => [
+          new Date(s.created_at).toLocaleDateString(),
+          (s as { branches?: { name: string } }).branches?.name || 'Main',
+          s.user_profiles?.full_name,
+          s.receipt_number,
+          s.total_amount,
+          s.payment_method
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `sales_export_${tenant.name.replace(/\s/g, '_')}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success('Export completed');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Export failed';
+      toast.error(message);
+    }
+  };
+
+  const handleResetData = async () => {
+    const confirmName = prompt(`To reset all sales, inventory, and analytics, please type the store name: "${tenant.name}"`);
+    if (confirmName !== tenant.name) {
+      if (confirmName !== null) toast.error('Store name mismatch. Reset cancelled.');
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      
+      const { error } = await supabase.rpc('reset_tenant_data', { _tenant_id: tenant.id });
+      if (error) throw error;
+
+      toast.success('Store data reset successfully');
+      onUpdate();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Reset failed';
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmText = prompt('This will permanently delete your store and ALL accounts. Type "DELETE" to confirm:');
+    if (confirmText !== 'DELETE') {
+      if (confirmText !== null) toast.error('Wrong confirmation. Deletion cancelled.');
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const { error } = await supabase.from('tenants').delete().eq('id', tenant.id);
+      if (error) throw error;
+      
+      toast.success('Account deleted. Logging out...');
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Deletion failed';
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,7 +368,7 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate }: {
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Store Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-            <Input label="Tenant ID" value={tenant.id} disabled className="bg-gray-50 opacity-80 font-mono text-[10px]" />
+            <Input label="Store ID" value={`KITN-${tenant.id.slice(0, 4).toUpperCase()}`} disabled className="bg-gray-50 opacity-80 font-mono text-sm font-black text-brand-green" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -286,9 +394,42 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate }: {
           </div>
           <div className="space-y-1.5">
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Subscription Tier</label>
-            <div className="flex items-center gap-2 p-3 bg-brand-green/5 border border-brand-green/10 rounded-xl">
-              <Badge variant="success">{tenant.subscription_tier || 'FREE PLAN'}</Badge>
-              <span className="text-[10px] font-bold text-gray-400 capitalize">Active since March 2024</span>
+            <div className="flex items-center justify-between p-3 bg-brand-green/5 border border-brand-green/10 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Badge variant="success">{tenant.subscription_tier || 'FREE PLAN'}</Badge>
+                <span className="text-[10px] font-bold text-gray-400 capitalize underline cursor-pointer" onClick={() => setActiveTab('subscription')}>View Billing</span>
+              </div>
+              <span className="text-[10px] font-bold text-gray-400 capitalize">14-day trial</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest flex items-center gap-2">
+            Quick Links
+            <div className="h-[1px] flex-1 bg-gray-100" />
+          </h3>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="flex items-center gap-4 p-4 bg-blue-50/50 border border-blue-100/50 rounded-2xl group hover:bg-blue-50 transition-colors cursor-pointer" onClick={() => window.location.href = '/dashboard/outlets'}>
+              <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Layout size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-black text-brand-dark">Manage Outlets</p>
+                <p className="text-[10px] font-bold text-gray-500">Add branches, transfer stock, compare performance</p>
+              </div>
+              <ExternalLink size={14} className="text-blue-400 group-hover:translate-x-1 transition-transform" />
+            </div>
+            
+            <div className="flex items-center gap-4 p-4 bg-purple-50/50 border border-purple-100/50 rounded-2xl group hover:bg-purple-50 transition-colors cursor-pointer" onClick={() => window.location.href = '/dashboard/team'}>
+              <div className="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <Users size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-black text-brand-dark">Manage Team</p>
+                <p className="text-[10px] font-bold text-gray-500">View staff performance, shifts and activity</p>
+              </div>
+              <ExternalLink size={14} className="text-purple-400 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
         </div>
@@ -396,6 +537,56 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate }: {
         <Button loading={saving} type="submit" className="gap-2">
           <Save size={18} /> Save All Changes
         </Button>
+      </div>
+
+      <div className="pt-12 space-y-6">
+        <h3 className="text-sm font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
+          Danger Zone
+          <div className="h-[1px] flex-1 bg-red-100" />
+        </h3>
+        
+        <div className="bg-red-50/30 border border-red-100 rounded-[32px] overflow-hidden">
+          <div className="p-6 md:p-8 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-black text-brand-dark">Export All Data</h4>
+                <p className="text-xs text-gray-500 font-medium">Download your entire sales history and product catalog as CSV files.</p>
+              </div>
+              <Button variant="outline" onClick={handleExportData} className="border-gray-200 text-gray-600 gap-2 whitespace-nowrap">
+                <Download size={16} /> Export Data (CSV)
+              </Button>
+            </div>
+            
+            <div className="h-[1px] bg-red-100/50" />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-black text-brand-dark">Reset Store Data</h4>
+                <p className="text-xs text-gray-500 font-medium">Clears all sales, inventory, and analytics while keeping your settings and team members.</p>
+              </div>
+              <Button variant="outline" onClick={handleResetData} loading={deleting} className="border-red-200 text-red-500 hover:bg-red-50 gap-2 whitespace-nowrap">
+                <RefreshCw size={16} /> Reset All Data
+              </Button>
+            </div>
+            
+            <div className="h-[1px] bg-red-100/50" />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-black text-red-600">Delete Account & Store</h4>
+                <p className="text-xs text-red-400 font-medium">Permanently delete your store, all data, and accounts. This action cannot be undone.</p>
+              </div>
+              <Button onClick={handleDeleteAccount} loading={deleting} className="bg-red-600 hover:bg-red-700 text-white gap-2 whitespace-nowrap shadow-lg shadow-red-600/20">
+                <Trash2 size={16} /> Delete Everything
+              </Button>
+            </div>
+          </div>
+          
+          <div className="bg-red-50 p-4 px-8 border-t border-red-100 flex items-center gap-3">
+            <ShieldAlert size={16} className="text-red-500" />
+            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">Warning: These actions are irreversible</p>
+          </div>
+        </div>
       </div>
     </form>
   );
@@ -591,6 +782,25 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
   return (
     <div className="p-8 space-y-12">
       <div className="space-y-6">
+        <div className="p-4 bg-brand-green/5 border border-brand-green/10 rounded-2xl flex items-center justify-between group">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-brand-green/10 flex items-center justify-center text-brand-green">
+              <Users size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-brand-green uppercase tracking-widest">Enhanced Management</p>
+              <p className="text-xs font-bold text-gray-600">To view staff performance, shifts and activity logs, visit the Team page.</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            onClick={() => window.location.href = '/dashboard/team'}
+            className="text-brand-green text-[10px] font-black uppercase tracking-widest gap-2 group-hover:bg-brand-green/5"
+          >
+            Team Page <ExternalLink size={12} />
+          </Button>
+        </div>
+
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">Team Members</h3>
@@ -902,3 +1112,301 @@ const DevicesTab = () => {
     </div>
   );
 };
+
+const SubscriptionTab = ({ subscription, tenant, onUpdate }: { 
+  subscription: ISubscription | null, 
+  tenant: ITenant | null, 
+  onUpdate: () => void 
+}) => {
+  interface IPlan {
+    id: 'free' | 'basic' | 'pro';
+    name: string;
+    price: number;
+    description: string;
+    features: string[];
+    missing: string[];
+    highlight?: boolean;
+  }
+
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<IPlan | null>(null);
+  const [mpesaPhone, setMpesaPhone] = useState(tenant?.phone || '');
+  const [loading, setLoading] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<ISubscription[]>([]);
+  const supabase = createClient();
+
+  const fetchPayments = useCallback(async () => {
+    if (!tenant) return;
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .order('last_payment_date', { ascending: false });
+    
+    if (data && data[0]?.last_payment_ref) {
+      setPaymentHistory(data);
+    }
+  }, [tenant, supabase]);
+
+  useEffect(() => {
+    if (tenant) fetchPayments();
+  }, [fetchPayments, tenant]);
+
+  if (!tenant) return null;
+
+  const handleUpgrade = async () => {
+    if (!selectedPlan) return;
+    try {
+      setLoading(true);
+      const res = await fetch('/api/mpesa/stk-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: mpesaPhone,
+          amount: selectedPlan.price,
+          reference: `SUBS-${tenant.id.slice(0, 4)}`,
+          metadata: {
+            plan: selectedPlan.id,
+            tenant_id: tenant.id
+          }
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+
+      toast.success('STK Push sent! Please check your phone to complete payment.');
+      setIsUpgradeModalOpen(false);
+      
+      // In a real app, we would poll for completion or use webhooks.
+      // For this MVP, we just refresh after a delay or success.
+      setTimeout(onUpdate, 10000);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Upgrade failed';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const PLANS: IPlan[] = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      description: 'Perfect for small shops starting out.',
+      features: ['1 outlet', '2 staff members', '100 products max', 'Basic sales reports'],
+      missing: ['Finance page', 'Multi-outlet', 'Data export']
+    },
+    {
+      id: 'basic',
+      name: 'Basic',
+      price: 999,
+      description: 'Ideal for growing businesses with multiple staff.',
+      features: ['3 outlets', '10 staff members', 'Unlimited products', 'Full reports + finance', 'Data export (CSV)'],
+      missing: ['Unlimited outlets', 'API access'],
+      highlight: true
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: 2499,
+      description: 'The complete solution for multi-branch empires.',
+      features: ['Unlimited outlets', 'Unlimited staff', 'All features', 'Priority support', 'Custom receipt branding', 'API access'],
+      missing: []
+    }
+  ];
+
+  const currentPlan = PLANS.find(p => p.id === (subscription?.plan || 'free'));
+  const daysRemaining = subscription?.trial_ends_at 
+    ? Math.ceil((new Date(subscription.trial_ends_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  return (
+    <div className="p-8 space-y-12 animate-in fade-in duration-500">
+      {/* Current Plan Overview */}
+      <div className="bg-white border border-gray-100 rounded-[32px] p-8 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-green/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Badge variant="success" className="px-4 py-1.5 text-[10px]">{currentPlan?.name.toUpperCase()} PLAN</Badge>
+              <Badge variant={subscription?.status === 'trial' ? 'warning' : 'info'} className="px-4 py-1.5 text-[10px]">
+                {subscription?.status?.toUpperCase() || 'STATUS'}
+              </Badge>
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-brand-dark tracking-tighter">
+                {currentPlan?.name} Subscription
+              </h2>
+              <p className="text-sm text-gray-500 font-bold mt-1">
+                {subscription?.status === 'trial' 
+                  ? `Your trial period ends in ${daysRemaining} days.`
+                  : `Next billing cycle on ${new Date(subscription?.current_period_end || '').toLocaleDateString()}.`}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <Button 
+                onClick={() => { setSelectedPlan(PLANS[1]); setIsUpgradeModalOpen(true); }}
+                className="gap-2 shadow-lg shadow-brand-green/20"
+            >
+              <CreditCard size={18} /> Upgrade Plan
+            </Button>
+            <Button variant="outline" className="gap-2 border-gray-200">
+              <ExternalLink size={18} /> Billing Portal
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Plan Comparison */}
+      <div className="space-y-8">
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-black text-brand-dark tracking-tighter uppercase">Choose Your Growth Plan</h3>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Scalable pricing for businesses of all sizes</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {PLANS.map((plan) => (
+            <div 
+              key={plan.id}
+              className={`
+                relative p-8 rounded-[40px] border-2 transition-all duration-500
+                ${plan.highlight ? 'border-brand-green bg-white shadow-2xl shadow-brand-green/10 scale-105 z-10' : 'border-gray-50 bg-gray-50/50 hover:bg-white hover:border-gray-200'}
+              `}
+            >
+              {plan.highlight && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-brand-green text-white px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-green/40">
+                  Most Popular
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-lg font-black text-brand-dark uppercase tracking-wide">{plan.name}</h4>
+                  <p className="text-xs text-gray-400 font-bold mt-1">{plan.description}</p>
+                </div>
+
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-black text-brand-dark tracking-tighter">KES {plan.price.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-gray-400">/mo</span>
+                </div>
+
+                <Button 
+                  className={`w-full py-4 rounded-[20px] font-black uppercase tracking-widest text-[10px] ${plan.id === subscription?.plan ? 'bg-gray-100 text-gray-400 cursor-default' : plan.highlight ? '' : 'variant-outline'}`}
+                  disabled={plan.id === subscription?.plan}
+                  onClick={() => { setSelectedPlan(plan); setIsUpgradeModalOpen(true); }}
+                >
+                  {plan.id === subscription?.plan ? 'Current Plan' : `Select ${plan.name}`}
+                </Button>
+
+                <div className="space-y-4 pt-6">
+                  {plan.features.map(f => (
+                    <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-gray-600">
+                      <CheckCircle2 size={16} className="text-brand-green shrink-0" />
+                      {f}
+                    </div>
+                  ))}
+                  {plan.missing.map(f => (
+                    <div key={f} className="flex items-center gap-3 text-[11px] font-bold text-gray-300">
+                      <XCircle size={16} className="text-gray-200 shrink-0" />
+                      {f}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Payment History */}
+      <div className="space-y-6 pt-12 border-t border-gray-100">
+        <div>
+          <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">Billing History</h3>
+          <p className="text-[11px] text-gray-400 font-bold uppercase mt-1">Manage your previous invoices and payments</p>
+        </div>
+        
+        <div className="bg-white border border-gray-100 rounded-[32px] overflow-hidden">
+          <Table headers={['Date', 'Plan', 'Amount', 'Reference', 'Status']}>
+            {paymentHistory.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-8 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3 text-gray-300">
+                    <AlertCircle size={40} className="opacity-20" />
+                    <p className="text-xs font-black uppercase tracking-widest">No payment records found</p>
+                  </div>
+                </td>
+              </tr>
+            ) : paymentHistory.map((p, i) => (
+              <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-8 py-4 text-xs font-bold text-brand-dark">
+                  {p.last_payment_date ? new Date(p.last_payment_date).toLocaleDateString() : 'N/A'}
+                </td>
+                <td className="px-8 py-4">
+                  <Badge variant="gray" className="uppercase text-[9px]">{p.plan}</Badge>
+                </td>
+                <td className="px-8 py-4 text-xs font-black text-brand-dark">
+                  KES {p.last_payment_amount?.toLocaleString()}
+                </td>
+                <td className="px-8 py-4 text-xs font-bold text-gray-400 font-mono">
+                  {p.last_payment_ref}
+                </td>
+                <td className="px-8 py-4">
+                  <Badge variant="success">PAID</Badge>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </div>
+      </div>
+
+      {/* Upgrade Modal */}
+      <Modal 
+        isOpen={isUpgradeModalOpen} 
+        onClose={() => setIsUpgradeModalOpen(false)} 
+        title={`Upgrade to ${selectedPlan?.name}`}
+        size="sm"
+      >
+        <div className="space-y-6">
+          <div className="bg-brand-green/5 p-6 rounded-3xl border border-brand-green/10 space-y-4">
+            <div className="flex items-center justify-between font-black text-brand-dark">
+              <span>Selected Plan</span>
+              <span className="uppercase text-brand-green">{selectedPlan?.name}</span>
+            </div>
+            <div className="flex items-center justify-between font-black text-brand-dark">
+              <span>Amount Due</span>
+              <span>KES {selectedPlan?.price.toLocaleString()}</span>
+            </div>
+            <div className="h-[1px] bg-brand-green/10" />
+            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+              * Payment will be processed via Safaricom M-Pesa STK Push. Ensure your phone is near and unlocked.
+            </div>
+          </div>
+
+          <Input 
+            label="M-Pesa Phone Number" 
+            placeholder="07XXXXXXXX" 
+            value={mpesaPhone}
+            onChange={e => setMpesaPhone(e.target.value)}
+          />
+
+          <Button 
+            onClick={handleUpgrade}
+            loading={loading}
+            className="w-full py-6 rounded-2xl shadow-xl shadow-brand-green/20 gap-3"
+          >
+            Pay KES {selectedPlan?.price.toLocaleString()} via M-Pesa
+          </Button>
+
+          <p className="text-[9px] text-center text-gray-400 font-bold uppercase tracking-tighter">
+            Secure payment powered by KiTN POS & Daraja API
+          </p>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
