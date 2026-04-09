@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 // Types
 interface StatCardProps {
@@ -195,7 +196,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <ErrorBoundary section="Dashboard Overview">
+      <div className="space-y-10 animate-in fade-in duration-700">
       <Breadcrumbs items={[{ label: 'Home' }]} />
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -316,7 +318,8 @@ export default function DashboardPage() {
             VIEW FULL HISTORY <ChevronRight size={12} />
           </Link>
         </div>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

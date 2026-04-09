@@ -34,6 +34,7 @@ import { createNotification } from '@/lib/notifications/notificationActions';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 type DateRange = 'today' | 'week' | 'month' | 'year' | 'custom';
 
@@ -387,7 +388,8 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <ErrorBoundary section="Financial Dashboard">
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       <Breadcrumbs items={[{ label: 'Home', href: '/dashboard' }, { label: 'Finance' }]} />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -700,6 +702,7 @@ export default function FinancePage() {
           </div>
         </form>
       </Modal>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

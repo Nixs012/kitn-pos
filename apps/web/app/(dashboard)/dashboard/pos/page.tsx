@@ -26,6 +26,7 @@ import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 
 // --- Types ---
@@ -486,7 +487,8 @@ export default function PosPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col gap-6 overflow-hidden">
+    <ErrorBoundary section="POS Terminal">
+      <div className="h-[calc(100vh-140px)] flex flex-col gap-6 overflow-hidden">
       
       {/* Mobile Cart Toggle */}
       <div className="lg:hidden flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -886,8 +888,7 @@ export default function PosPage() {
           </div>
         )}
       </Modal>
-
-      {/* Styles for scrollbars and animations */}
+      
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -906,6 +907,7 @@ export default function PosPage() {
           background: #e1e1e1;
         }
       `}</style>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
