@@ -16,7 +16,7 @@ import {
   ImageIcon,
   RefreshCw
 } from 'lucide-react';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import Image from 'next/image';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
@@ -94,11 +94,11 @@ export default function ProductsPage() {
       if (isAddModalOpen || isEditModalOpen) {
         // If adding/editing, fill the barcode field
         setFormData(prev => ({ ...prev, barcode: code }));
-        toast.success(`Barcode detected: ${code}`);
+        toast.showSuccess(`Barcode detected: ${code}`);
       } else {
         // Otherwise, use it to search the catalog
         setSearch(code);
-        toast.success(`Searching for: ${code}`);
+        toast.showSuccess(`Searching for: ${code}`);
       }
     }
   });
@@ -123,7 +123,7 @@ export default function ProductsPage() {
       setProducts(data || []);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error('Failed to load products: ' + message);
+      toast.showError('Failed to load products: ' + message);
     } finally {
       setLoading(false);
     }
@@ -145,7 +145,7 @@ export default function ProductsPage() {
       fetchProducts(profileData.tenant_id);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error('Session error: ' + message);
+      toast.showError('Session error: ' + message);
     }
   }, [supabase, fetchProducts]);
 
@@ -158,7 +158,7 @@ export default function ProductsPage() {
     if (!file) return;
 
     if (file.size > 52428800) { // 50MB
-      toast.error('File size exceeds 50MB limit');
+      toast.showError('File size exceeds 50MB limit');
       return;
     }
 
@@ -180,10 +180,10 @@ export default function ProductsPage() {
 
       setTempImageUrl(publicUrl);
       setFormData(prev => ({ ...prev, image_url: publicUrl }));
-      toast.success('Image uploaded successfully');
+      toast.showSuccess('Image uploaded successfully');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Upload failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setIsUploading(false);
     }
@@ -224,7 +224,7 @@ export default function ProductsPage() {
 
       if (iError) throw iError;
 
-      toast.success('Product added successfully');
+      toast.showSuccess('Product added successfully');
       setIsAddModalOpen(false);
       fetchProducts();
       setFormData({
@@ -235,7 +235,7 @@ export default function ProductsPage() {
       setTempImageUrl(null);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(message);
+      toast.showError(message);
     }
   };
 
@@ -261,12 +261,12 @@ export default function ProductsPage() {
 
       if (error) throw error;
 
-      toast.success('Product updated');
+      toast.showSuccess('Product updated');
       setIsEditModalOpen(false);
       fetchProducts();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(message);
+      toast.showError(message);
     }
   };
 
@@ -281,12 +281,12 @@ export default function ProductsPage() {
 
       if (error) throw error;
 
-      toast.success('Product deleted');
+      toast.showSuccess('Product deleted');
       setIsDeleteModalOpen(false);
       fetchProducts();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(message);
+      toast.showError(message);
     }
   };
 
@@ -295,7 +295,7 @@ export default function ProductsPage() {
     if (!file) return;
 
     setIsImporting(true);
-    const loadingToast = toast.loading('Importing products...');
+    const loadingToast = toast.showLoading('Importing products...');
 
     interface CSVRow {
       Name?: string;
@@ -341,21 +341,21 @@ export default function ProductsPage() {
           const data = await response.json();
 
           if (data.success) {
-            toast.success(`Successfully imported ${data.count} products`, { id: loadingToast });
+            toast.showSuccess(`Successfully imported ${data.count} products`, { id: loadingToast });
             fetchProducts();
           } else {
             throw new Error(data.error || 'Import failed');
           }
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : 'Import failed';
-          toast.error(message, { id: loadingToast });
+          toast.showError(message, { id: loadingToast });
         } finally {
           setIsImporting(false);
           if (e.target) e.target.value = '';
         }
       },
       error: (error) => {
-        toast.error('CSV Parsing Error: ' + error.message, { id: loadingToast });
+        toast.showError('CSV Parsing Error: ' + error.message, { id: loadingToast });
         setIsImporting(false);
       }
     });
@@ -586,7 +586,7 @@ export default function ProductsPage() {
                   onScan={(code) => {
                     setFormData({...formData, barcode: code});
                     setIsScannerOpen(false);
-                    toast.success('Barcode scanned: ' + code);
+                    toast.showSuccess('Barcode scanned: ' + code);
                   }}
                   onClose={() => setIsScannerOpen(false)}
                 />

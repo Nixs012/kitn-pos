@@ -13,7 +13,7 @@ import {
   FileDown
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
@@ -100,9 +100,9 @@ export default function InventoryPage() {
         if (error) throw error;
         setInventory(data || []);
       }
-    } catch (error: unknown) {
-      toast.error('Failed to load inventory');
-      console.error(error);
+    } catch (err: unknown) {
+      console.error('Fetch error:', err);
+      toast.showError('Could not sync products');
     } finally {
       setLoading(false);
     }
@@ -144,12 +144,12 @@ export default function InventoryPage() {
         reference_id: restockData.supplier || 'Restock'
       });
 
-      toast.success(`Stock updated — ${selectedProduct.name} now has ${newQty} ${selectedProduct.unit}`);
+      toast.showSuccess(`Stock updated — ${selectedProduct.name} now has ${newQty} ${selectedProduct.unit}`);
       setIsRestockModalOpen(false);
       setRestockData({ quantity: '', supplier: '', cost: '' });
       fetchInventory();
     } catch {
-      toast.error('Failed to update stock');
+      toast.showError('Failed to update stock');
     }
   };
 
@@ -182,12 +182,12 @@ export default function InventoryPage() {
         reference_id: adjustmentData.reason
       });
 
-      toast.success(`Adjustment recorded for ${product.name}`);
+      toast.showSuccess(`Adjustment recorded for ${product.name}`);
       setIsAdjustmentModalOpen(false);
       setAdjustmentData({ productId: '', newQuantity: '', reason: REASONS[0] });
       fetchInventory();
     } catch {
-      toast.error('Failed to adjust stock');
+      toast.showError('Failed to adjust stock');
     }
   };
 

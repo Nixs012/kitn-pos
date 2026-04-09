@@ -8,7 +8,7 @@ import Input from '@/components/ui/Input';
 import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 
 type Tab = 'customers' | 'suppliers';
 
@@ -102,7 +102,7 @@ export default function DirectoryPage() {
       }
     } catch (error) {
       console.error('Error fetching initial data:', error);
-      toast.error('Failed to load directory data');
+      toast.showError('Failed to load directory data');
     } finally {
       setLoading(false);
     }
@@ -142,20 +142,20 @@ export default function DirectoryPage() {
           .from('customers')
           .insert([{ ...entryData, tenant_id: tenantId }]);
         if (error) throw error;
-        toast.success('Customer added successfully');
+        toast.showSuccess('Customer added successfully');
         fetchCustomers(tenantId!);
       } else {
         const { error } = await supabase
           .from('suppliers')
           .insert([{ ...entryData, tenant_id: tenantId }]);
         if (error) throw error;
-        toast.success('Supplier added successfully');
+        toast.showSuccess('Supplier added successfully');
         fetchSuppliers(tenantId!);
       }
       setIsModalOpen(false);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'An error occurred';
-      toast.error(message);
+      toast.showError(message);
     }
   };
 

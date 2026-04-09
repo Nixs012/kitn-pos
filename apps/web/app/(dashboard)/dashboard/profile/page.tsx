@@ -20,7 +20,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
@@ -149,7 +149,7 @@ export default function ProfilePage() {
 
     } catch (err: unknown) {
       const error = err as Error;
-      toast.error(error.message || 'Failed to load profile');
+      toast.showError(error.message || 'Failed to load profile');
       console.error(err);
     } finally {
       setLoading(false);
@@ -181,14 +181,14 @@ export default function ProfilePage() {
       if (personalData.email !== profile.email) {
         const { error: authError } = await supabase.auth.updateUser({ email: personalData.email });
         if (authError) throw authError;
-        toast.info('Please confirm your new email address');
+        toast.showInfo('Please confirm your new email address');
       }
 
-      toast.success('Profile updated successfully');
+      toast.showSuccess('Profile updated successfully');
       fetchProfile();
     } catch (err: unknown) {
       const error = err as Error;
-      toast.error(error.message || 'Update failed');
+      toast.showError(error.message || 'Update failed');
     } finally {
       setSaving(false);
     }
@@ -197,22 +197,22 @@ export default function ProfilePage() {
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (securityData.newPassword !== securityData.confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.showError('Passwords do not match');
       return;
     }
     if (securityData.newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
+      toast.showError('Password must be at least 8 characters');
       return;
     }
     setSaving(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: securityData.newPassword });
       if (error) throw error;
-      toast.success('Password updated successfully');
+      toast.showSuccess('Password updated successfully');
       setSecurityData({ ...securityData, currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err: unknown) {
       const error = err as Error;
-      toast.error(error.message || 'Password update failed');
+      toast.showError(error.message || 'Password update failed');
     } finally {
       setSaving(false);
     }
@@ -222,11 +222,11 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!profile) return;
     if (securityData.newPIN !== securityData.confirmPIN) {
-      toast.error('PINs do not match');
+      toast.showError('PINs do not match');
       return;
     }
     if (securityData.newPIN.length !== 4) {
-      toast.error('PIN must be 4 digits');
+      toast.showError('PIN must be 4 digits');
       return;
     }
     setSaving(true);
@@ -237,11 +237,11 @@ export default function ProfilePage() {
         .eq('id', profile.id);
 
       if (error) throw error;
-      toast.success('PIN updated successfully');
+      toast.showSuccess('PIN updated successfully');
       setSecurityData({ ...securityData, currentPIN: '', newPIN: '', confirmPIN: '' });
     } catch (err: unknown) {
       const error = err as Error;
-      toast.error(error.message || 'PIN update failed');
+      toast.showError(error.message || 'PIN update failed');
     } finally {
       setSaving(false);
     }
@@ -251,10 +251,10 @@ export default function ProfilePage() {
     try {
       const { error } = await supabase.auth.signOut({ scope: 'others' });
       if (error) throw error;
-      toast.success('Signed out from other devices');
+      toast.showSuccess('Signed out from other devices');
     } catch (err: unknown) {
       const error = err as Error;
-      toast.error(error.message || 'Sign out failed');
+      toast.showError(error.message || 'Sign out failed');
     }
   };
 
@@ -282,11 +282,11 @@ export default function ProfilePage() {
         .update({ avatar_url: publicUrl })
         .eq('id', profile.id);
 
-      toast.success('Avatar updated');
+      toast.showSuccess('Avatar updated');
       fetchProfile();
     } catch (err: unknown) {
       const error = err as Error;
-      toast.error('Upload failed: ' + error.message);
+      toast.showError('Upload failed: ' + error.message);
     }
   };
 

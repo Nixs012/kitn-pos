@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, ArrowRightLeft, AlertCircle, ShoppingBag } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 
 interface Branch {
   id: string;
@@ -100,23 +100,23 @@ export default function StockTransferModal({
 
   const handleTransfer = async () => {
     if (!fromBranchId || !toBranchId || !selectedProductId || !quantity) {
-      toast.error('All fields marked with * are required');
+      toast.showError('All fields marked with * are required');
       return;
     }
 
     if (fromBranchId === toBranchId) {
-      toast.error('Source and destination branches must be different');
+      toast.showError('Source and destination branches must be different');
       return;
     }
 
     const transferQty = Number(quantity);
     if (isNaN(transferQty) || transferQty <= 0) {
-      toast.error('Please enter a valid quantity');
+      toast.showError('Please enter a valid quantity');
       return;
     }
 
     if (currentStock !== null && transferQty > currentStock) {
-      toast.error('Transfer quantity exceeds current stock at source');
+      toast.showError('Transfer quantity exceeds current stock at source');
       return;
     }
 
@@ -196,13 +196,13 @@ export default function StockTransferModal({
         }
       ]);
 
-      toast.success(`Transferred ${transferQty} ${product?.unit || ''} of ${product?.name} from ${fromBranch?.name} to ${toBranch?.name}`);
+      toast.showSuccess(`Transferred ${transferQty} ${product?.unit || ''} of ${product?.name} from ${fromBranch?.name} to ${toBranch?.name}`);
       onSuccess();
       onClose();
     } catch (err: unknown) {
       console.error('Transfer error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to complete transfer';
-      toast.error(errorMessage);
+      toast.showError(errorMessage);
     } finally {
       setLoading(false);
     }

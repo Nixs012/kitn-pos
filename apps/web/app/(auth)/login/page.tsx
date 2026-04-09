@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import KitnLogo from '@/components/ui/KitnLogo'
-import { toast } from 'sonner'
+import * as toast from '@/lib/toast'
 import { Mail, Lock, ChevronRight, UserCircle2 } from 'lucide-react'
 
 type Role = 'admin' | 'manager' | 'cashier' | 'viewer'
@@ -40,10 +40,10 @@ export default function LoginPage() {
 
     if (error) {
       setError(error.message)
-      toast.error(error.message)
+      toast.showError(error.message)
       setLoading(false)
     } else {
-      toast.success('Successfully signed in!')
+      toast.showSuccess('Successfully signed in!')
       router.push('/dashboard')
       router.refresh()
     }
@@ -63,9 +63,9 @@ export default function LoginPage() {
       if (data.error) {
         setPinError(true)
         setPin('')
-        toast.error(data.error)
+        toast.showError(data.error)
       } else {
-        toast.success(`Welcome back! Logging you in...`)
+        toast.showSuccess(`Welcome back! Logging you in...`)
         router.push('/dashboard')
         router.refresh()
       }

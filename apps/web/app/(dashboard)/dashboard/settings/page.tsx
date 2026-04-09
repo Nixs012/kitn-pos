@@ -24,7 +24,7 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 
 // Components
 import Button from '@/components/ui/Button';
@@ -158,7 +158,7 @@ export default function SettingsPage() {
 
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }
@@ -276,17 +276,17 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      toast.success('Export completed');
+      toast.showSuccess('Export completed');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Export failed';
-      toast.error(message);
+      toast.showError(message);
     }
   };
 
   const handleResetData = async () => {
     const confirmName = prompt(`To reset all sales, inventory, and analytics, please type the store name: "${tenant.name}"`);
     if (confirmName !== tenant.name) {
-      if (confirmName !== null) toast.error('Store name mismatch. Reset cancelled.');
+      if (confirmName !== null) toast.showError('Store name mismatch. Reset cancelled.');
       return;
     }
 
@@ -296,11 +296,11 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
       const { error } = await supabase.rpc('reset_tenant_data', { _tenant_id: tenant.id });
       if (error) throw error;
 
-      toast.success('Store data reset successfully');
+      toast.showSuccess('Store data reset successfully');
       onUpdate();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Reset failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setDeleting(false);
     }
@@ -309,7 +309,7 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
   const handleDeleteAccount = async () => {
     const confirmText = prompt('This will permanently delete your store and ALL accounts. Type "DELETE" to confirm:');
     if (confirmText !== 'DELETE') {
-      if (confirmText !== null) toast.error('Wrong confirmation. Deletion cancelled.');
+      if (confirmText !== null) toast.showError('Wrong confirmation. Deletion cancelled.');
       return;
     }
 
@@ -318,12 +318,12 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
       const { error } = await supabase.from('tenants').delete().eq('id', tenant.id);
       if (error) throw error;
       
-      toast.success('Account deleted. Logging out...');
+      toast.showSuccess('Account deleted. Logging out...');
       await supabase.auth.signOut();
       window.location.href = '/login';
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Deletion failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setDeleting(false);
     }
@@ -348,11 +348,11 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
         .eq('id', tenant.id);
 
       if (error) throw error;
-      toast.success('Store settings updated successfully');
+      toast.showSuccess('Store settings updated successfully');
       onUpdate();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setSaving(false);
     }
@@ -655,7 +655,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
         url: window.location.origin
       });
       
-      toast.success('User account created successfully');
+      toast.showSuccess('User account created successfully');
       setIsAddModalOpen(false);
       setIsSuccessModalOpen(true);
       onUpdate();
@@ -672,7 +672,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }
@@ -695,12 +695,12 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
 
-      toast.success('Profile updated successfully');
+      toast.showSuccess('Profile updated successfully');
       setIsEditModalOpen(false);
       onUpdate();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Update failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }
@@ -710,7 +710,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
     e.preventDefault();
     if (!selectedUser) return;
     if (pinData.pin !== pinData.confirmPin) {
-      toast.error('PINs do not match');
+      toast.showError('PINs do not match');
       return;
     }
     try {
@@ -727,12 +727,12 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
 
-      toast.success('PIN reset successfully');
+      toast.showSuccess('PIN reset successfully');
       setIsPinModalOpen(false);
       setPinData({ pin: '', confirmPin: '' });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'PIN reset failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }
@@ -752,12 +752,12 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       });
 
       if (!response.ok) throw new Error('Status update failed');
-      toast.success(`User ${user.is_active ? 'deactivated' : 'activated'} successfully`);
+      toast.showSuccess(`User ${user.is_active ? 'deactivated' : 'activated'} successfully`);
       setIsDeactivateModalOpen(false);
       onUpdate();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to update status';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }
@@ -765,7 +765,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied!`);
+    toast.showSuccess(`${label} copied!`);
   };
 
   const openEditModal = (user: IUserProfile) => {
@@ -1175,7 +1175,7 @@ const SubscriptionTab = ({ subscription, tenant, onUpdate }: {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
 
-      toast.success('STK Push sent! Please check your phone to complete payment.');
+      toast.showSuccess('STK Push sent! Please check your phone to complete payment.');
       setIsUpgradeModalOpen(false);
       
       // In a real app, we would poll for completion or use webhooks.
@@ -1183,7 +1183,7 @@ const SubscriptionTab = ({ subscription, tenant, onUpdate }: {
       setTimeout(onUpdate, 10000);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Upgrade failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }

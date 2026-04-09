@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import { showSuccess, showError, showWarning } from '@/lib/toast';
 
 export type NotificationType = 'low_stock' | 'out_of_stock' | 'sale' | 'info' | 'summary';
 
@@ -24,6 +24,7 @@ interface NotificationState {
   fetchNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
   addNotification: (notification: Notification) => void;
   subscribeToNotifications: (tenantId: string) => () => void;
 }
@@ -97,6 +98,30 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+      showError('Failed to mark all as read');
+    }
+  },
+
+  clearAllNotifications: async () => {
+    try {
+      // For KiTN, clearing means marking all as read for now
+      // Alternatively, we could delete them, but marking read is safer.
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('is_read', false);
+
+      if (error) throw error;
+
+      set((state) => ({
+        notifications: state.notifications.map(n => ({ ...n, is_read: true })),
+        unreadCount: 0
+      }));
+      
+      showSuccess('Inbox cleared');
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+      showError('Failed to clear notifications');
     }
   },
 
@@ -136,14 +161,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           const newNotif = payload.new as Notification;
           get().addNotification(newNotif);
           
-          // Show toast for new notification
-          toast(newNotif.title, {
-            description: newNotif.message,
-            action: {
-              label: 'View',
-              onClick: () => console.log('View notification', newNotif.id)
-            }
-          });
+          // Show toast for new notification using our unified system
+          if (newNotif.type === 'sale') {
+            // Special toast for sales
+            const amount = Number(newNotif.metadata?.amount || 0);
+            const method = String(newNotif.metadata?.payment_method || 'Cash');
+            import('@/lib/toast').then(m => m.showSaleSuccess(amount, method));
+          } else if (newNotif.type === 'low_stock' || newNotif.type === 'out_of_stock') {
+            import('@/lib/toast').then(m => m.showLowStockAlert(newNotif.title, Number(newNotif.metadata?.quantity || 0)));
+          } else {
+            showSuccess(newNotif.message);
+          }
         }
       )
       .subscribe();

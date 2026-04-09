@@ -25,7 +25,7 @@ import Card from '@/components/ui/Card';
 import OutletCard, { OutletCardProps } from '@/components/outlets/OutletCard';
 import StockTransferModal from '@/components/outlets/StockTransferModal';
 import AddOutletModal from '@/components/outlets/AddOutletModal';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 const BRAND_COLORS = ['#1D9E75', '#378ADD', '#D85A30', '#8B5CF6', '#EC4899', '#F59E0B'];
@@ -193,7 +193,7 @@ export default function OutletsPage() {
           <Button 
             onClick={() => {
               if (subscriptionTier === 'free') {
-                toast.error('Multiple outlets & stock transfers require a Basic plan');
+                toast.showError('Multiple outlets & stock transfers require a Basic plan');
                 return;
               }
               setIsTransferModalOpen(true);
@@ -207,7 +207,7 @@ export default function OutletsPage() {
           <Button 
             onClick={() => {
               if (subscriptionTier === 'free') {
-                toast.error('Unlock unlimited outlets with a Basic plan');
+                toast.showError('Unlock unlimited outlets with a Basic plan');
                 return;
               }
               setIsAddModalOpen(true);

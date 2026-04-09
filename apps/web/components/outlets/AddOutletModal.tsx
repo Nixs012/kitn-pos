@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, MapPin, Phone, Mail, Clock, UserPlus, Save } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 
 interface Manager {
   id: string;
@@ -69,7 +69,7 @@ export default function AddOutletModal({
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.address || !formData.town || !formData.phone) {
-      toast.error('Please fill in all required fields');
+      toast.showError('Please fill in all required fields');
       return;
     }
 
@@ -127,13 +127,13 @@ export default function AddOutletModal({
         if (invError) console.error('Inventory init error:', invError);
       }
 
-      toast.success(`${formData.name} added successfully — inventory initialized at 0`);
+      toast.showSuccess(`${formData.name} added successfully — inventory initialized at 0`);
       onSuccess();
       onClose();
     } catch (err: unknown) {
       console.error('Add branch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to add outlet';
-      toast.error(errorMessage);
+      toast.showError(errorMessage);
     } finally {
       setLoading(false);
     }

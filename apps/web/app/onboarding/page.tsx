@@ -18,7 +18,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User } from '@supabase/supabase-js';
@@ -159,7 +159,7 @@ export default function OnboardingPage() {
 
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Setup failed';
-      toast.error(message);
+      toast.showError(message);
     } finally {
       setLoading(false);
     }

@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import * as toast from '@/lib/toast';
 
 // Types
 interface StatCardProps {
@@ -155,6 +156,7 @@ export default function DashboardPage() {
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      toast.showError('Failed to refresh dashboard stats');
     } finally {
       setLoading(false);
     }

@@ -23,7 +23,7 @@ import { checkStockAndNotify, createNotification } from '@/lib/notifications/not
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -170,9 +170,9 @@ export default function PosPage() {
       const product = products.find(p => p.barcode === code || p.sku === code);
       if (product) {
         addItem(product);
-        toast.success(`Success: ${product.name} added to cart`);
+        toast.showSuccess(`Success: ${product.name} added to cart`);
       } else {
-        toast.error(`Unrecognized barcode: ${code}`);
+        toast.showError(`Unrecognized barcode: ${code}`);
       }
     }
   });
@@ -228,9 +228,9 @@ export default function PosPage() {
     const product = products.find(p => p.barcode === code || p.sku === code);
     if (product) {
       addItem(product);
-      toast.success(`Added ${product.name} to cart`);
+      toast.showSuccess(`Added ${product.name} to cart`);
     } else {
-      toast.error(`Product with barcode ${code} not found`);
+      toast.showError(`Product with barcode ${code} not found`);
     }
   };
 
@@ -238,9 +238,9 @@ export default function PosPage() {
     // Search is already filtered by the state 'search', 
     // but we can provide feedback or scroll to results
     if (filteredProducts.length === 0) {
-      toast.info("No products found for this search");
+      toast.showWarning("No products found for this search");
     } else {
-      toast.success(`Found ${filteredProducts.length} results`);
+      toast.showSuccess(`Found ${filteredProducts.length} results`);
     }
   };
 
@@ -261,7 +261,7 @@ export default function PosPage() {
 
   const completeSale = async (method: 'cash' | 'mpesa' | 'card' = 'cash', mpesaRef?: string) => {
     if (items.length === 0) {
-      toast.error('Cart is empty');
+      toast.showError('Cart is empty');
       return null;
     }
 
@@ -350,13 +350,17 @@ export default function PosPage() {
       setIsReceiptModalOpen(true);
       clearCart();
       setDiscount(0);
-      toast.success('Sale completed successfully!');
+      const methodValue = method as 'Cash' | 'M-Pesa' | 'Card'; 
+      toast.showSuccess(`Sale completed via ${methodValue}`);
+      setIsReceiptModalOpen(true);
+      clearCart();
+      setDiscount(0);
       fetchInitialData();
       return sale;
     } catch (err: unknown) {
       console.error('Checkout Error:', err);
       const message = err instanceof Error ? err.message : 'Failed to complete sale';
-      toast.error(message);
+      toast.showError(message);
       return null;
     } finally {
       setIsProcessing(false);
@@ -365,12 +369,12 @@ export default function PosPage() {
 
   const handleMpesaPush = async () => {
     if (!mpesaPhone || !totals.total) {
-      toast.error('Please enter a valid phone number');
+      toast.showError('Please enter a valid phone number');
       return;
     }
 
     if (!/^(07|01|2547|2541|\+2547|\+2541)\d{8}$/.test(mpesaPhone)) {
-      toast.error('Invalid phone number format');
+      toast.showError('Invalid phone number format');
       return;
     }
 
@@ -396,7 +400,7 @@ export default function PosPage() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
 
-      toast.success('STK Push sent! Please enter your PIN on your phone.');
+      toast.showSuccess('STK Push sent! Please enter your PIN on your phone.');
       setCurrentCheckoutId(data.checkoutRequestID);
       setMpesaPollCount(0);
       
@@ -404,7 +408,7 @@ export default function PosPage() {
       // We'll also start a polling check
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'M-Pesa push failed';
-      toast.error(message);
+      toast.showError(message);
       setIsWaitingForMpesa(false);
     }
   };
@@ -447,7 +451,7 @@ export default function PosPage() {
           setIsReceiptModalOpen(true);
           clearCart();
           setDiscount(0);
-          toast.success('M-Pesa Payment Verified!');
+          toast.showSuccess('M-Pesa Payment Verified!');
           setCurrentCheckoutId(null);
           fetchInitialData();
         }

@@ -25,6 +25,7 @@ export default function NotificationBell() {
     fetchNotifications, 
     markAsRead, 
     markAllAsRead,
+    clearAllNotifications,
     subscribeToNotifications,
     initialized
   } = useNotificationStore();
@@ -75,15 +76,23 @@ export default function NotificationBell() {
         <div className="absolute right-0 mt-3 w-[360px] bg-white rounded-[24px] shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
           <div className="p-5 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
             <h3 className="text-sm font-black text-brand-dark uppercase tracking-widest">Notifications</h3>
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-4">
+              {unreadCount > 0 && (
+                <button 
+                  onClick={() => markAllAsRead()}
+                  className="text-[10px] font-black text-brand-green uppercase tracking-wider flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+                >
+                  <CheckCheck size={12} />
+                  Mark all read
+                </button>
+              )}
               <button 
-                onClick={() => markAllAsRead()}
-                className="text-[10px] font-black text-brand-green uppercase tracking-wider flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+                onClick={() => clearAllNotifications()}
+                className="text-[10px] font-black text-gray-400 uppercase tracking-wider hover:text-red-500 transition-colors"
               >
-                <CheckCheck size={12} />
-                Mark all read
+                Clear all
               </button>
-            )}
+            </div>
           </div>
 
           <div className="max-h-[400px] overflow-y-auto scrollbar-thin">
@@ -121,7 +130,13 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <button className="w-full py-4 bg-gray-50/50 border-t border-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-brand-dark transition-colors">
+          <button 
+            onClick={() => {
+              setIsOpen(false);
+              window.location.href = '/dashboard/activities';
+            }}
+            className="w-full py-4 bg-gray-50/50 border-t border-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] hover:text-brand-dark transition-colors"
+          >
             View all activity
           </button>
         </div>

@@ -17,7 +17,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { useUserStore } from '@/stores/userStore';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -232,9 +232,9 @@ export default function TeamPerformancePage() {
       console.error('Fetch error:', err);
       // Show more detailed error if it comes from Supabase
       if (typeof err === 'object' && err !== null && 'message' in err) {
-        toast.error(`Database Error: ${String((err as { message: unknown }).message)}`);
+        toast.showError(`Database Error: ${String((err as { message: unknown }).message)}`);
       } else {
-        toast.error(errorMessage);
+        toast.showError(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -258,7 +258,7 @@ export default function TeamPerformancePage() {
           .eq('id', (currentShift as Shift).id);
         
         if (error) throw error;
-        toast.success('Clocked out successfully');
+        toast.showSuccess('Clocked out successfully');
       } else {
         // Clock In
         const { error } = await supabase
@@ -271,16 +271,11 @@ export default function TeamPerformancePage() {
           });
         
         if (error) throw error;
-        toast.success('Clocked in successfully');
+        toast.showSuccess('Clocked in successfully');
       }
       fetchData();
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Action failed';
-      if (typeof err === 'object' && err !== null && 'message' in err) {
-        toast.error(`Clock Action Error: ${String((err as { message: unknown }).message)}`);
-      } else {
-        toast.error(errorMessage);
-      }
+    } catch {
+      toast.showError('Operation failed');
     }
   };
 
@@ -385,10 +380,10 @@ export default function TeamPerformancePage() {
           <Button 
             onClick={() => {
               if (subscriptionTier === 'free') {
-                toast.error('Detailed team reports require a Basic plan');
+                toast.showError('Detailed team reports require a Basic plan');
                 return;
               }
-              toast.success('Report generation started...');
+              toast.showSuccess('Report generation started...');
             }}
             variant="outline"
             className="border-brand-green/30 text-brand-green hover:bg-brand-green/5 px-6 py-4 flex items-center gap-2"

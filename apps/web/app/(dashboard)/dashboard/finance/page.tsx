@@ -27,7 +27,7 @@ import { createClient } from '@/lib/supabase/client';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import { Breadcrumbs, UpgradePrompt } from '@/components/ui/Breadcrumbs';
 import { useUserStore } from '@/stores/userStore';
 import { createNotification } from '@/lib/notifications/notificationActions';
@@ -152,10 +152,10 @@ export default function FinancePage() {
         message: `Today's total: KES ${totalRevenue.toLocaleString()} from ${transactionCount} transactions`
       });
 
-      toast.success('Daily summary generated and notified!');
+      toast.showSuccess('Daily summary generated and notified!');
     } catch (err) {
       console.error('Error generating summary:', err);
-      toast.error('Failed to generate daily summary');
+      toast.showError('Failed to generate daily summary');
     } finally {
       setLoading(false);
     }
@@ -213,14 +213,13 @@ export default function FinancePage() {
 
       if (error) throw error;
       
-      toast.success('Expense logged successfully');
+      setLoading(false);
       setIsExpenseModalOpen(false);
-      setExpenseData({ category: 'Other', amount: '', description: '' });
       fetchFinanceData();
-    } catch (err) {
-      console.error('Error logging expense:', err);
-      toast.error('Failed to log expense');
-    } finally {
+      toast.showSuccess('Expense logged successfully');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to log expense';
+      toast.showError(message);
       setLoading(false);
     }
   };
@@ -360,7 +359,7 @@ export default function FinancePage() {
 
     } catch (error: unknown) {
       console.error('Finance Fetch Error:', error);
-      toast.error('Failed to load financial data');
+      toast.showError('Failed to load financial data');
     } finally {
       setLoading(false);
     }

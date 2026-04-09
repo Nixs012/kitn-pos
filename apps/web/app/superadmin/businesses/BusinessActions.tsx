@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   ShieldAlert, 
   Zap, 
@@ -10,7 +11,7 @@ import {
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 
 export const BusinessActions = ({ 
   tenantId, 
@@ -26,6 +27,7 @@ export const BusinessActions = ({
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(currentPlan);
   const supabase = createClient();
+  const router = useRouter();
 
   const handleUpdatePlan = async () => {
     try {
@@ -46,12 +48,11 @@ export const BusinessActions = ({
 
       if (sError) throw sError;
 
-      toast.success('Subscription plan updated successfully');
+      toast.showSuccess('Subscription plan updated successfully');
       setIsPlanModalOpen(false);
-      window.location.reload(); // Refresh to show new data
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Update failed';
-      toast.error(message);
+      router.refresh();
+    } catch {
+      toast.showError('Failed to update subscription');
     } finally {
       setLoading(false);
     }
@@ -67,12 +68,11 @@ export const BusinessActions = ({
 
       if (error) throw error;
 
-      toast.success(isSuspended ? 'Business reactivated' : 'Business suspended');
+      toast.showSuccess(isSuspended ? 'Business reactivated' : 'Business suspended');
       setIsSuspendModalOpen(false);
-      window.location.reload();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Operation failed';
-      toast.error(message);
+      router.refresh();
+    } catch {
+      toast.showError('Failed to update status');
     } finally {
       setLoading(false);
     }

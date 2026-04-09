@@ -30,7 +30,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
-import { toast } from 'sonner';
+import * as toast from '@/lib/toast';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
@@ -202,8 +202,8 @@ export default function SalesReportsPage() {
       );
 
     } catch (err: unknown) {
-      console.error('Sales reports fetch error:', err);
-      toast.error('Failed to load sales reports');
+      console.error('Fetch error:', err);
+      toast.showError('Could not sync sales history');
     } finally {
       setLoading(false);
     }
