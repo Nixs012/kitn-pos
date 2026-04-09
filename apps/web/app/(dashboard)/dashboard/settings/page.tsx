@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { safeQuery } from '@/lib/supabase/handleError';
 import { 
   Store, 
   Users, 
@@ -106,16 +107,22 @@ export default function SettingsPage() {
   const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await safeQuery<{ user: { id: string; email?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
       if (!user) return;
 
       // 1. Fetch Profile
-      const { data: profileData, error: pe } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      if (pe) throw pe;
+      const profileData = await safeQuery<IUserProfile>(
+        () => supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.user.id)
+          .single(),
+        'load profile'
+      );
+      if (!profileData) return;
       setProfile(profileData);
 
       if (profileData.role !== 'admin') {
@@ -124,41 +131,47 @@ export default function SettingsPage() {
       }
 
       // 2. Fetch Tenant
-      const { data: tenantData, error: te } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', profileData.tenant_id)
-        .single();
-      if (te) throw te;
-      setTenant(tenantData);
+      const tenantData = await safeQuery<ITenant>(
+        () => supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', profileData.tenant_id)
+          .single(),
+        'load tenant'
+      );
+      if (tenantData) setTenant(tenantData);
 
       // 3. Fetch Users (including new email/phone columns)
-      const { data: usersData, error: ue } = await supabase
-        .from('user_profiles')
-        .select('*, branches(name, id)')
-        .eq('tenant_id', profileData.tenant_id);
-      if (ue) throw ue;
+      const usersData = await safeQuery<IUserProfile[]>(
+        () => supabase
+          .from('user_profiles')
+          .select('*, branches(name, id)')
+          .eq('tenant_id', profileData.tenant_id),
+        'load users'
+      );
       setUsers(usersData || []);
 
       // 4. Fetch Branches
-      const { data: branchesData, error: be } = await supabase
-        .from('branches')
-        .select('*')
-        .eq('tenant_id', profileData.tenant_id);
-      if (be) throw be;
+      const branchesData = await safeQuery<{ id: string; name: string }[]>(
+        () => supabase
+          .from('branches')
+          .select('*')
+          .eq('tenant_id', profileData.tenant_id),
+        'load branches'
+      );
       setBranches(branchesData || []);
 
       // 5. Fetch Subscription
-      const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('tenant_id', profileData.tenant_id)
-        .single();
+      const subData = await safeQuery<ISubscription>(
+        () => supabase
+          .from('subscriptions')
+          .select('*')
+          .eq('tenant_id', profileData.tenant_id)
+          .single(),
+        'load subscription'
+      );
       setSubscription(subData);
 
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError(message);
     } finally {
       setLoading(false);
     }
@@ -315,15 +328,16 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
 
     try {
       setDeleting(true);
-      const { error } = await supabase.from('tenants').delete().eq('id', tenant.id);
-      if (error) throw error;
+      const success = await safeQuery(
+        () => supabase.from('tenants').delete().eq('id', tenant.id),
+        'delete tenant'
+      );
       
-      toast.showSuccess('Account deleted. Logging out...');
-      await supabase.auth.signOut();
-      window.location.href = '/login';
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Deletion failed';
-      toast.showError(message);
+      if (success !== null) {
+        toast.showSuccess('Account deleted. Logging out...');
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+      }
     } finally {
       setDeleting(false);
     }
@@ -333,26 +347,27 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
     e.preventDefault();
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from('tenants')
-        .update({
-          name: formData.name,
-          business_type: formData.business_type,
-          county: formData.county,
-          phone: formData.phone,
-          email: formData.email,
-          address: formData.address,
-          receipt_footer: formData.receipt_footer,
-          vat_number: formData.vat_number
-        })
-        .eq('id', tenant.id);
+      const success = await safeQuery(
+        () => supabase
+          .from('tenants')
+          .update({
+            name: formData.name,
+            business_type: formData.business_type,
+            county: formData.county,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            receipt_footer: formData.receipt_footer,
+            vat_number: formData.vat_number
+          })
+          .eq('id', tenant.id),
+        'update tenant'
+      );
 
-      if (error) throw error;
-      toast.showSuccess('Store settings updated successfully');
-      onUpdate();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError(message);
+      if (success !== null) {
+        toast.showSuccess('Store settings updated successfully');
+        onUpdate();
+      }
     } finally {
       setSaving(false);
     }
@@ -1137,11 +1152,14 @@ const SubscriptionTab = ({ subscription, tenant, onUpdate }: {
 
   const fetchPayments = useCallback(async () => {
     if (!tenant) return;
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('tenant_id', tenant.id)
-      .order('last_payment_date', { ascending: false });
+    const data = await safeQuery<ISubscription[]>(
+      () => supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .order('last_payment_date', { ascending: false }),
+      'fetch payments'
+    );
     
     if (data && data[0]?.last_payment_ref) {
       setPaymentHistory(data);

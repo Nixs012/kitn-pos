@@ -18,6 +18,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { safeQuery } from '@/lib/supabase/handleError';
 import { useCartStore } from '@/stores/cartStore';
 import { checkStockAndNotify, createNotification } from '@/lib/notifications/notificationActions';
 import Button from '@/components/ui/Button';
@@ -180,30 +181,36 @@ export default function PosPage() {
 
   const fetchInitialData = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await safeQuery<{ user: { id: string; email?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
       if (!user) return;
 
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const profileData = await safeQuery<UserProfile>(
+        () => supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.user.id)
+          .single(),
+        'load profile'
+      );
 
-      if (profileError) throw profileError;
+      if (!profileData) return;
       setProfile(profileData);
       setCashierName(profileData.full_name || 'Cashier');
 
       // Fetch products for this tenant
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*, inventory(quantity, reorder_level)')
-        .eq('tenant_id', profileData.tenant_id)
-        .eq('is_active', true);
+      const productsData = await safeQuery<Product[]>(
+        () => supabase
+          .from('products')
+          .select('*, inventory(quantity, reorder_level)')
+          .eq('tenant_id', profileData.tenant_id)
+          .eq('is_active', true),
+        'load products'
+      );
 
-      if (productsError) throw productsError;
       setProducts(productsData || []);
-    } catch (err: unknown) {
-      console.error('Initial Data Error:', err);
     } finally {
       setLoading(false);
     }
@@ -267,7 +274,12 @@ export default function PosPage() {
 
     try {
       setIsProcessing(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await safeQuery<{ user: { id: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
+      if (!user) return null;
+      
       const branchId = profile?.branch_id;
       const tenantId = profile?.tenant_id;
 
@@ -276,44 +288,53 @@ export default function PosPage() {
       const receiptNumber = `RCPT-${Date.now().toString().slice(-8)}`;
 
       // 1. Create Sale
-      const { data: sale, error: saleError } = await supabase
-        .from('sales')
-        .insert({
-          branch_id: branchId,
-          cashier_id: user?.id,
-          receipt_number: receiptNumber,
-          total_amount: totals.total,
-          discount: discount,
-          tax_amount: totals.vat,
-          payment_method: method,
-          mpesa_ref: mpesaRef || null
-        })
-        .select()
-        .single();
+      const sale = await safeQuery<Sale>(
+        () => supabase
+          .from('sales')
+          .insert({
+            branch_id: branchId,
+            cashier_id: user?.user.id,
+            receipt_number: receiptNumber,
+            total_amount: totals.total,
+            discount: discount,
+            tax_amount: totals.vat,
+            payment_method: method,
+            mpesa_ref: mpesaRef || null
+          })
+          .select()
+          .single(),
+        'create sale'
+      );
 
-      if (saleError) throw saleError;
+      if (!sale) return null;
 
       // 2. Insert Sale Items
       for (const item of items) {
-        await supabase.from('sale_items').insert({
-          sale_id: sale.id,
-          product_id: item.id,
-          quantity: item.quantity,
-          unit_price: item.price,
-          vat_amount: (item.price * item.quantity) - (item.price * item.quantity / (1 + item.vat_rate / 100))
-        });
+        await safeQuery(
+          () => supabase.from('sale_items').insert({
+            sale_id: sale.id,
+            product_id: item.id,
+            quantity: item.quantity,
+            unit_price: item.price,
+            vat_amount: (item.price * item.quantity) - (item.price * item.quantity / (1 + item.vat_rate / 100))
+          }),
+          'record sale item'
+        );
 
         // Update Inventory
         const currentStock = products.find(p => p.id === item.id)?.inventory?.[0]?.quantity || 0;
-      const { data: updatedInventory, error: invError } = await supabase
-          .from('inventory')
-          .update({ quantity: currentStock - item.quantity })
-          .eq('product_id', item.id)
-          .eq('branch_id', branchId)
-          .select('quantity, reorder_level')
-          .single();
+        const updatedInventory = await safeQuery<{ quantity: number; reorder_level: number }>(
+          () => supabase
+            .from('inventory')
+            .update({ quantity: currentStock - item.quantity })
+            .eq('product_id', item.id)
+            .eq('branch_id', branchId)
+            .select('quantity, reorder_level')
+            .single(),
+          'update inventory'
+        );
 
-        if (!invError && updatedInventory) {
+        if (updatedInventory) {
           await checkStockAndNotify(
             item.id,
             item.name,
@@ -324,20 +345,23 @@ export default function PosPage() {
         }
 
         // Add Stock Movement
-        await supabase.from('stock_movements').insert({
-          product_id: item.id,
-          branch_id: branchId,
-          type: 'sale',
-          quantity_change: -item.quantity,
-          reference_id: sale.id,
-          created_by: user?.id
-        });
+        await safeQuery(
+          () => supabase.from('stock_movements').insert({
+            product_id: item.id,
+            branch_id: branchId,
+            type: 'sale',
+            quantity_change: -item.quantity,
+            reference_id: sale.id,
+            created_by: user?.user.id
+          }),
+          'log stock movement'
+        );
       }
 
       // Generate Sale Notification
       await createNotification({
         tenantId,
-        userId: user?.id,
+        userId: user?.user.id,
         type: 'sale',
         title: 'New Sale',
         message: `New sale ${receiptNumber} — KES ${totals.total.toLocaleString()} by ${profile.full_name || 'Cashier'}`
@@ -423,11 +447,14 @@ export default function PosPage() {
       if (data.status === 'success') {
         // Success! The sale is already created, just needs to show it.
         // We fetch the sale record again to get all its details
-        const { data: saleData } = await supabase
-          .from('sales')
-          .select('*, user_profiles(full_name), sale_items(*, products(name))')
-          .eq('mpesa_ref', data.receipt) // Now it has the receipt
-          .single();
+        const saleData = await safeQuery<Sale & { sale_items: Record<string, unknown>[], user_profiles: { full_name: string } }>(
+          () => supabase
+            .from('sales')
+            .select('*, user_profiles(full_name), sale_items(*, products(name))')
+            .eq('mpesa_ref', data.receipt) // Now it has the receipt
+            .single(),
+          'verify mpesa sale'
+        );
 
         if (saleData) {
           const rawItems = (saleData.sale_items || []) as Array<{ 

@@ -25,12 +25,12 @@ import {
   Eye
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { safeQuery } from '@/lib/supabase/handleError';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
-import * as toast from '@/lib/toast';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
@@ -123,14 +123,20 @@ export default function SalesReportsPage() {
   const fetchSalesData = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await safeQuery<{ user: { id: string; email?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('tenant_id, branch_id')
-        .eq('id', user.id)
-        .single();
+      const profile = await safeQuery<{ tenant_id: string; branch_id: string }>(
+        () => supabase
+          .from('user_profiles')
+          .select('tenant_id, branch_id')
+          .eq('id', user.user.id)
+          .single(),
+        'load profile'
+      );
 
       if (!profile) return;
 
@@ -139,21 +145,23 @@ export default function SalesReportsPage() {
       else if (dateRange === 'week') startDate.setDate(startDate.getDate() - 7);
       else if (dateRange === 'month') startDate.setMonth(startDate.getMonth() - 1);
 
-      const { data: salesData, error } = await supabase
-        .from('sales')
-        .select(`
-          *,
-          user_profiles!inner(full_name),
-          sale_items (
+      const salesData = await safeQuery<Sale[]>(
+        () => supabase
+          .from('sales')
+          .select(`
             *,
-            products (name)
-          )
-        `)
-        .eq('branch_id', profile.branch_id)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at', { ascending: false });
+            user_profiles!inner(full_name),
+            sale_items (
+              *,
+              products (name)
+            )
+          `)
+          .eq('branch_id', profile.branch_id)
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: false }),
+        'load sales report'
+      );
 
-      if (error) throw error;
       setSales(salesData || []);
       
       // Calculate Metrics
@@ -201,9 +209,6 @@ export default function SalesReportsPage() {
           .map((p, i) => ({ ...p, rank: i + 1, percentage: totalRev ? ((p.revenue / totalRev) * 100).toFixed(1) : 0 }))
       );
 
-    } catch (err: unknown) {
-      console.error('Fetch error:', err);
-      toast.showError('Could not sync sales history');
     } finally {
       setLoading(false);
     }

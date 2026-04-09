@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { safeQuery } from '@/lib/supabase/handleError';
 import { 
   Plus, 
   Search, 
@@ -110,42 +111,43 @@ export default function ProductsPage() {
       const tid = tenantId || profile?.tenant_id;
       if (!tid) return;
 
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          inventory(quantity, reorder_level)
-        `)
-        .eq('tenant_id', tid)
-        .order('name');
+      const data = await safeQuery<Product[]>(
+        () => supabase
+          .from('products')
+          .select(`
+            *,
+            inventory(quantity, reorder_level)
+          `)
+          .eq('tenant_id', tid)
+          .order('name'),
+        'load products'
+      );
 
-      if (error) throw error;
       setProducts(data || []);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError('Failed to load products: ' + message);
     } finally {
       setLoading(false);
     }
   }, [supabase, profile?.tenant_id]);
 
   const loadInitialData = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    const user = await safeQuery<{ user: { id: string; email?: string } }>(
+      () => supabase.auth.getUser(),
+      'get user'
+    );
+    if (!user) return;
 
-      const { data: profileData, error: profileError } = await supabase
+    const profileData = await safeQuery<{ tenant_id: string; branch_id: string }>(
+      () => supabase
         .from('user_profiles')
         .select('tenant_id, branch_id')
-        .eq('id', user.id)
-        .single();
+        .eq('id', user.user.id)
+        .single(),
+      'load profile'
+    );
 
-      if (profileError) throw profileError;
+    if (profileData) {
       setProfile(profileData);
       fetchProducts(profileData.tenant_id);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError('Session error: ' + message);
     }
   }, [supabase, fetchProducts]);
 
@@ -168,11 +170,14 @@ export default function ProductsPage() {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file);
+      const uploadResult = await safeQuery(
+        () => supabase.storage
+          .from('product-images')
+          .upload(filePath, file),
+        'upload image'
+      );
 
-      if (uploadError) throw uploadError;
+      if (!uploadResult) return;
 
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
@@ -181,9 +186,6 @@ export default function ProductsPage() {
       setTempImageUrl(publicUrl);
       setFormData(prev => ({ ...prev, image_url: publicUrl }));
       toast.showSuccess('Image uploaded successfully');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Upload failed';
-      toast.showError(message);
     } finally {
       setIsUploading(false);
     }
@@ -192,37 +194,43 @@ export default function ProductsPage() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!profile) throw new Error('User profile not loaded');
+      if (!profile) return;
 
-      const { data: product, error: pError } = await supabase
-        .from('products')
-        .insert({
-          tenant_id: profile.tenant_id,
-          name: formData.name,
-          barcode: formData.barcode,
-          sku: formData.sku,
-          category: formData.category,
-          buying_price: formData.buying_price,
-          selling_price: formData.selling_price,
-          vat_rate: formData.vat_rate,
-          unit: formData.unit,
-          image_url: formData.image_url
-        })
-        .select()
-        .single();
+      const product = await safeQuery<Product>(
+        () => supabase
+          .from('products')
+          .insert({
+            tenant_id: profile.tenant_id,
+            name: formData.name,
+            barcode: formData.barcode,
+            sku: formData.sku,
+            category: formData.category,
+            buying_price: formData.buying_price,
+            selling_price: formData.selling_price,
+            vat_rate: formData.vat_rate,
+            unit: formData.unit,
+            image_url: formData.image_url
+          })
+          .select()
+          .single(),
+        'create product'
+      );
 
-      if (pError) throw pError;
+      if (!product) return;
 
-      const { error: iError } = await supabase
-        .from('inventory')
-        .insert({
-          product_id: product.id,
-          branch_id: profile.branch_id,
-          quantity: formData.initial_stock,
-          reorder_level: 10
-        });
+      const invSuccess = await safeQuery(
+        () => supabase
+          .from('inventory')
+          .insert({
+            product_id: product.id,
+            branch_id: profile.branch_id,
+            quantity: formData.initial_stock,
+            reorder_level: 10
+          }),
+        'initialize inventory'
+      );
 
-      if (iError) throw iError;
+      if (invSuccess === null) return;
 
       toast.showSuccess('Product added successfully');
       setIsAddModalOpen(false);
@@ -233,9 +241,8 @@ export default function ProductsPage() {
         initial_stock: 0, image_url: ''
       });
       setTempImageUrl(null);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError(message);
+    } finally {
+      // safeQuery handles the toast feedback
     }
   };
 
@@ -243,8 +250,8 @@ export default function ProductsPage() {
     e.preventDefault();
     if (!currentProduct) return;
 
-    try {
-      const { error } = await supabase
+    const success = await safeQuery(
+      () => supabase
         .from('products')
         .update({
           name: formData.name,
@@ -257,36 +264,32 @@ export default function ProductsPage() {
           unit: formData.unit,
           image_url: formData.image_url
         })
-        .eq('id', currentProduct.id);
+        .eq('id', currentProduct.id),
+      'update product'
+    );
 
-      if (error) throw error;
-
+    if (success !== null) {
       toast.showSuccess('Product updated');
       setIsEditModalOpen(false);
       fetchProducts();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError(message);
     }
   };
 
   const handleDeleteProduct = async () => {
     if (!currentProduct) return;
 
-    try {
-      const { error } = await supabase
+    const success = await safeQuery(
+      () => supabase
         .from('products')
         .update({ is_active: false })
-        .eq('id', currentProduct.id);
+        .eq('id', currentProduct.id),
+      'delete product'
+    );
 
-      if (error) throw error;
-
+    if (success !== null) {
       toast.showSuccess('Product deleted');
       setIsDeleteModalOpen(false);
       fetchProducts();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      toast.showError(message);
     }
   };
 

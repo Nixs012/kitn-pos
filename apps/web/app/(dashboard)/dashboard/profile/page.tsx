@@ -20,6 +20,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { safeQuery } from '@/lib/supabase/handleError';
 import * as toast from '@/lib/toast';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -98,59 +99,67 @@ export default function ProfilePage() {
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await safeQuery<{ user: { id: string; email?: string; last_sign_in_at?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
       if (!user) return;
 
-      const { data: profileData, error } = await supabase
-        .from('user_profiles')
-        .select('*, branch:branches(name)')
-        .eq('id', user.id)
-        .single();
+      const profileData = await safeQuery<UserProfile & { branch?: { name: string } | null }>(
+        () => supabase
+          .from('user_profiles')
+          .select('*, branch:branches(name)')
+          .eq('id', user.user.id)
+          .single(),
+        'load profile'
+      );
 
-      if (error) throw error;
+      if (profileData) {
+        const userData: UserProfile = {
+          id: user.user.id,
+          full_name: profileData.full_name || '',
+          email: user.user.email || '',
+          phone: profileData.phone || '',
+          id_number: profileData.id_number || '',
+          county: profileData.county || 'Nairobi',
+          role: profileData.role,
+          branch_name: profileData.branch?.name || 'Main Branch',
+          avatar_url: profileData.avatar_url,
+          is_active: profileData.is_active,
+          created_at: profileData.created_at,
+          last_login: user.user.last_sign_in_at
+        };
 
-      const userData: UserProfile = {
-        id: user.id,
-        full_name: profileData.full_name || '',
-        email: user.email || '',
-        phone: profileData.phone || '',
-        id_number: profileData.id_number || '',
-        county: profileData.county || 'Nairobi',
-        role: profileData.role,
-        branch_name: profileData.branch?.name || 'Main Branch',
-        avatar_url: profileData.avatar_url,
-        is_active: profileData.is_active,
-        created_at: profileData.created_at,
-        last_login: user.last_sign_in_at
-      };
-
-      setProfile(userData);
-      setPersonalData({
-        full_name: userData.full_name,
-        email: userData.email,
-        phone: userData.phone,
-        id_number: userData.id_number || '',
-        county: userData.county || 'Nairobi'
-      });
+        setProfile(userData);
+        setPersonalData({
+          full_name: userData.full_name,
+          email: userData.email,
+          phone: userData.phone,
+          id_number: userData.id_number || '',
+          county: userData.county || 'Nairobi'
+        });
+      }
 
       // Fetch Audit Logs
-      const { data: logs } = await supabase
-        .from('audit_log')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const logs = await safeQuery<Record<string, unknown>[]>(
+        () => supabase
+          .from('audit_log')
+          .select('*')
+          .eq('user_id', user.user.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        'load logs'
+      );
       
       setAuditLogs(logs || []);
 
       // Get Session Info
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
+      const sessionData = await safeQuery<{ session: Record<string, unknown> | null }>(
+        () => supabase.auth.getSession(),
+        'get session'
+      );
+      setSession(sessionData?.session);
 
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.showError(error.message || 'Failed to load profile');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -164,31 +173,34 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
+    setSaving(true);
     try {
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .update({
-          full_name: personalData.full_name,
-          phone: personalData.phone,
-          id_number: personalData.id_number,
-          county: personalData.county
-        })
-        .eq('id', profile.id);
+      const success = await safeQuery(
+        () => supabase
+          .from('user_profiles')
+          .update({
+            full_name: personalData.full_name,
+            phone: personalData.phone,
+            id_number: personalData.id_number,
+            county: personalData.county
+          })
+          .eq('id', profile.id),
+        'update profile'
+      );
 
-      if (profileError) throw profileError;
+      if (success === null) return;
 
       // Email update if changed
       if (personalData.email !== profile.email) {
-        const { error: authError } = await supabase.auth.updateUser({ email: personalData.email });
-        if (authError) throw authError;
-        toast.showInfo('Please confirm your new email address');
+        const authSuccess = await safeQuery(
+          () => supabase.auth.updateUser({ email: personalData.email }),
+          'update email'
+        );
+        if (authSuccess) toast.showInfo('Please confirm your new email address');
       }
 
       toast.showSuccess('Profile updated successfully');
       fetchProfile();
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.showError(error.message || 'Update failed');
     } finally {
       setSaving(false);
     }
@@ -205,14 +217,16 @@ export default function ProfilePage() {
       return;
     }
     setSaving(true);
+    setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: securityData.newPassword });
-      if (error) throw error;
-      toast.showSuccess('Password updated successfully');
-      setSecurityData({ ...securityData, currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.showError(error.message || 'Password update failed');
+      const success = await safeQuery(
+        () => supabase.auth.updateUser({ password: securityData.newPassword }),
+        'update password'
+      );
+      if (success) {
+        toast.showSuccess('Password updated successfully');
+        setSecurityData({ ...securityData, currentPassword: '', newPassword: '', confirmPassword: '' });
+      }
     } finally {
       setSaving(false);
     }
@@ -230,18 +244,20 @@ export default function ProfilePage() {
       return;
     }
     setSaving(true);
+    setSaving(true);
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ pin_hash: securityData.newPIN })
-        .eq('id', profile.id);
+      const success = await safeQuery(
+        () => supabase
+          .from('user_profiles')
+          .update({ pin_hash: securityData.newPIN })
+          .eq('id', profile.id),
+        'update pin'
+      );
 
-      if (error) throw error;
-      toast.showSuccess('PIN updated successfully');
-      setSecurityData({ ...securityData, currentPIN: '', newPIN: '', confirmPIN: '' });
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.showError(error.message || 'PIN update failed');
+      if (success !== null) {
+        toast.showSuccess('PIN updated successfully');
+        setSecurityData({ ...securityData, currentPIN: '', newPIN: '', confirmPIN: '' });
+      }
     } finally {
       setSaving(false);
     }
@@ -267,26 +283,31 @@ export default function ProfilePage() {
       const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
+      const uploadResult = await safeQuery(
+        () => supabase.storage
+          .from('avatars')
+          .upload(filePath, file),
+        'upload avatar'
+      );
 
-      if (uploadError) throw uploadError;
+      if (!uploadResult) return;
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      await supabase
-        .from('user_profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id);
+      await safeQuery(
+        () => supabase
+          .from('user_profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', profile.id),
+        'update profile avatar'
+      );
 
       toast.showSuccess('Avatar updated');
       fetchProfile();
-    } catch (err: unknown) {
-      const error = err as Error;
-      toast.showError('Upload failed: ' + error.message);
+    } finally {
+      // safeQuery handles the toast
     }
   };
 

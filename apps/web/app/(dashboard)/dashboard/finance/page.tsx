@@ -27,6 +27,7 @@ import { createClient } from '@/lib/supabase/client';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Table from '@/components/ui/Table';
+import { safeQuery } from '@/lib/supabase/handleError';
 import * as toast from '@/lib/toast';
 import { Breadcrumbs, UpgradePrompt } from '@/components/ui/Breadcrumbs';
 import { useUserStore } from '@/stores/userStore';
@@ -56,6 +57,21 @@ interface Expense {
   amount: number;
   description: string;
   created_at: string;
+}
+
+interface FinanceSale {
+  id: string;
+  created_at: string;
+  payment_method: string;
+  total_amount: number | string;
+  tax_amount: number | string;
+  discount: number | string;
+  sale_items: Array<{
+    quantity: number;
+    unit_price: number;
+    product_id: string;
+    products?: { name: string; buying_price: number } | null;
+  }>;
 }
 
 interface ProductProfit {
@@ -134,12 +150,15 @@ export default function FinancePage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const { data: todaySales, error } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .gte('created_at', today.toISOString());
+      const todaySales = await safeQuery<Array<{ total_amount: number | string }>>(
+        () => supabase
+          .from('sales')
+          .select('total_amount')
+          .gte('created_at', today.toISOString()),
+        'load today sales'
+      );
 
-      if (error) throw error;
+      if (!todaySales) return;
 
       const totalRevenue = todaySales.reduce((acc, sale) => acc + Number(sale.total_amount), 0);
       const transactionCount = todaySales.length;
@@ -153,43 +172,48 @@ export default function FinancePage() {
       });
 
       toast.showSuccess('Daily summary generated and notified!');
-    } catch (err) {
-      console.error('Error generating summary:', err);
-      toast.showError('Failed to generate daily summary');
     } finally {
       setLoading(false);
     }
   };
 
   const fetchInitialInfo = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    const user = await safeQuery<{ user: { id: string; email?: string } }>(
+      () => supabase.auth.getUser(),
+      'get user'
+    );
+    if (!user) return;
 
-      const { data: profile } = await supabase
+    const profileData = await safeQuery<{ tenant_id: string }>(
+      () => supabase
         .from('user_profiles')
         .select('tenant_id')
-        .eq('id', user.id)
-        .single();
+        .eq('id', user.user.id)
+        .single(),
+      'load profile'
+    );
 
-      if (profile) {
-        setTenantId(profile.tenant_id);
-        const { data: branchesData } = await supabase
+    if (profileData) {
+      setTenantId(profileData.tenant_id);
+      const branchesData = await safeQuery<{ id: string; name: string }[]>(
+        () => supabase
           .from('branches')
           .select('id, name')
-          .eq('tenant_id', profile.tenant_id);
-        if (branchesData) setBranches(branchesData);
+          .eq('tenant_id', profileData.tenant_id),
+        'load branches'
+      );
+      if (branchesData) setBranches(branchesData);
 
-        // Fetch subscription tier
-        const { data: tenantData } = await supabase
+      // Fetch subscription tier
+      const tenantData = await safeQuery<{ subscription_tier: string }>(
+        () => supabase
           .from('tenants')
           .select('subscription_tier')
-          .eq('id', profile.tenant_id)
-          .single();
-        if (tenantData) setSubscriptionTier(tenantData.subscription_tier);
-      }
-    } catch (error) {
-      console.error('Initial Info Error:', error);
+          .eq('id', profileData.tenant_id)
+          .single(),
+        'load tenant'
+      );
+      if (tenantData) setSubscriptionTier(tenantData.subscription_tier);
     }
   }, [supabase]);
 
@@ -201,25 +225,24 @@ export default function FinancePage() {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
-    try {
-      setLoading(true);
-      const { error } = await supabase.from('expenses').insert({
+    setLoading(true);
+    const success = await safeQuery(
+      () => supabase.from('expenses').insert({
         tenant_id: profile.tenant_id,
         category: expenseData.category,
         amount: Number(expenseData.amount),
         description: expenseData.description,
         created_by: profile.id
-      });
+      }),
+      'log expense'
+    );
 
-      if (error) throw error;
-      
+    if (success !== null) {
       setLoading(false);
       setIsExpenseModalOpen(false);
       fetchFinanceData();
       toast.showSuccess('Expense logged successfully');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to log expense';
-      toast.showError(message);
+    } else {
       setLoading(false);
     }
   };
@@ -234,7 +257,7 @@ export default function FinancePage() {
       else if (dateRange === 'month') startDate.setMonth(startDate.getMonth() - 1);
       else if (dateRange === 'year') startDate.setFullYear(startDate.getFullYear() - 1);
 
-      const query = supabase
+      let query = supabase
         .from('sales')
         .select(`
           *,
@@ -249,11 +272,15 @@ export default function FinancePage() {
         .order('created_at', { ascending: true });
 
       if (selectedBranch !== 'all') {
-        query.eq('branch_id', selectedBranch);
+        query = query.eq('branch_id', selectedBranch);
       }
 
-      const { data: sales, error: salesError } = await query;
-      if (salesError) throw salesError;
+      const sales = await safeQuery<FinanceSale[]>(
+        () => query,
+        'fetch sales'
+      );
+
+      if (!sales) return;
 
       // Aggregations
       let grossRev = 0;
@@ -264,7 +291,7 @@ export default function FinancePage() {
       const payMap: Record<string, number> = {};
       const prodMap: Record<string, ProductProfit> = {};
 
-      sales?.forEach(sale => {
+      sales?.forEach((sale: FinanceSale) => {
         totalVat += Number(sale.tax_amount || 0);
         totalDiscount += Number(sale.discount || 0);
         
@@ -338,16 +365,19 @@ export default function FinancePage() {
       setProductProfitData(Object.values(prodMap).sort((a, b) => b.profit - a.profit));
 
       // Fetch Expenses
-      const { data: expensesData } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .gte('created_at', startDate.toISOString())
-        .order('created_at', { ascending: false });
+      const expensesData = await safeQuery<Expense[]>(
+        () => supabase
+          .from('expenses')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .gte('created_at', startDate.toISOString())
+          .order('created_at', { ascending: false }),
+        'fetch expenses'
+      );
 
       if (expensesData) {
         setExpenses(expensesData);
-        const totalExp = expensesData.reduce((acc, e) => acc + Number(e.amount), 0);
+        const totalExp = expensesData.reduce((acc: number, e: Expense) => acc + Number(e.amount), 0);
         const netProfit = grossProfit - totalExp;
 
         setMetrics(prev => ({

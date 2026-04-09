@@ -13,6 +13,7 @@ import {
   FileDown
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { safeQuery } from '@/lib/supabase/handleError';
 import * as toast from '@/lib/toast';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -73,36 +74,41 @@ export default function InventoryPage() {
   const fetchInventory = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await safeQuery<{ user: { id: string; email?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('branch_id')
-        .eq('id', user.id)
-        .single();
+      const profile = await safeQuery<{ branch_id: string }>(
+        () => supabase
+          .from('user_profiles')
+          .select('branch_id')
+          .eq('id', user.user.id)
+          .single(),
+        'load profile'
+      );
 
       if (profile?.branch_id) {
         setBranchId(profile.branch_id);
         
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            id, name, sku, category, unit,
-            inventory!inner (
-              id, quantity, reorder_level, last_restocked
-            )
-          `)
-          .eq('inventory.branch_id', profile.branch_id)
-          .eq('is_active', true)
-          .order('name');
+        const data = await safeQuery<InventoryItem[]>(
+          () => supabase
+            .from('products')
+            .select(`
+              id, name, sku, category, unit,
+              inventory!inner (
+                id, quantity, reorder_level, last_restocked
+              )
+            `)
+            .eq('inventory.branch_id', profile.branch_id)
+            .eq('is_active', true)
+            .order('name'),
+          'load inventory'
+        );
 
-        if (error) throw error;
         setInventory(data || []);
       }
-    } catch (err: unknown) {
-      console.error('Fetch error:', err);
-      toast.showError('Could not sync products');
     } finally {
       setLoading(false);
     }
@@ -123,33 +129,43 @@ export default function InventoryPage() {
       const newQty = currentInv.quantity + addedQty;
 
       // 1. Update Inventory
-      const { error: invError } = await supabase
-        .from('inventory')
-        .update({ 
-          quantity: newQty,
-          last_restocked: new Date().toISOString()
-        })
-        .eq('id', currentInv.id);
+      const success = await safeQuery(
+        () => supabase
+          .from('inventory')
+          .update({ 
+            quantity: newQty,
+            last_restocked: new Date().toISOString()
+          })
+          .eq('id', currentInv.id),
+        'update inventory'
+      );
 
-      if (invError) throw invError;
+      if (success === null) return;
 
       // 2. Log Movement
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('stock_movements').insert({
-        product_id: selectedProduct.id,
-        branch_id: branchId,
-        type: 'restock',
-        quantity_change: addedQty,
-        created_by: user?.id,
-        reference_id: restockData.supplier || 'Restock'
-      });
+      const user = await safeQuery<{ user: { id: string; email?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
+      
+      await safeQuery(
+        () => supabase.from('stock_movements').insert({
+          product_id: selectedProduct.id,
+          branch_id: branchId,
+          type: 'restock',
+          quantity_change: addedQty,
+          created_by: user?.user.id,
+          reference_id: restockData.supplier || 'Restock'
+        }),
+        'log movement'
+      );
 
       toast.showSuccess(`Stock updated — ${selectedProduct.name} now has ${newQty} ${selectedProduct.unit}`);
       setIsRestockModalOpen(false);
       setRestockData({ quantity: '', supplier: '', cost: '' });
       fetchInventory();
-    } catch {
-      toast.showError('Failed to update stock');
+    } finally {
+      // safeQuery handles the toast
     }
   };
 
@@ -164,30 +180,40 @@ export default function InventoryPage() {
       const diff = newQty - currentInv.quantity;
 
       // 1. Update Inventory
-      const { error: invError } = await supabase
-        .from('inventory')
-        .update({ quantity: newQty })
-        .eq('id', currentInv.id);
+      const success = await safeQuery(
+        () => supabase
+          .from('inventory')
+          .update({ quantity: newQty })
+          .eq('id', currentInv.id),
+        'adjust inventory'
+      );
 
-      if (invError) throw invError;
+      if (success === null) return;
 
       // 2. Log Movement
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('stock_movements').insert({
-        product_id: product.id,
-        branch_id: branchId,
-        type: 'adjustment',
-        quantity_change: diff,
-        created_by: user?.id,
-        reference_id: adjustmentData.reason
-      });
+      const user = await safeQuery<{ user: { id: string; email?: string } }>(
+        () => supabase.auth.getUser(),
+        'get user'
+      );
+      
+      await safeQuery(
+        () => supabase.from('stock_movements').insert({
+          product_id: product.id,
+          branch_id: branchId,
+          type: 'adjustment',
+          quantity_change: diff,
+          created_by: user?.user.id,
+          reference_id: adjustmentData.reason
+        }),
+        'log adjustment movement'
+      );
 
       toast.showSuccess(`Adjustment recorded for ${product.name}`);
       setIsAdjustmentModalOpen(false);
       setAdjustmentData({ productId: '', newQuantity: '', reason: REASONS[0] });
       fetchInventory();
-    } catch {
-      toast.showError('Failed to adjust stock');
+    } finally {
+      // safeQuery handles the toast
     }
   };
 
