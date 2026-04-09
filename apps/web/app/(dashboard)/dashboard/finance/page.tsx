@@ -4,14 +4,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TrendingUp, 
   DollarSign, 
-  ShoppingBag, 
-  Percent, 
-  Receipt, 
   Tag, 
-  Filter,
-  ArrowUpRight,
+  ArrowUpRight, 
   ArrowDownRight,
-  Calendar
+  Filter,
+  Calendar,
+  Receipt
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -33,6 +31,9 @@ import { toast } from 'sonner';
 import { Breadcrumbs, UpgradePrompt } from '@/components/ui/Breadcrumbs';
 import { useUserStore } from '@/stores/userStore';
 import { createNotification } from '@/lib/notifications/notificationActions';
+import Modal from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 type DateRange = 'today' | 'week' | 'month' | 'year' | 'custom';
 
@@ -44,6 +45,16 @@ interface FinanceMetrics {
   vatCollected: number;
   discountsGiven: number;
   netRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+}
+
+interface Expense {
+  id: string;
+  category: string;
+  amount: number;
+  description: string;
+  created_at: string;
 }
 
 interface ProductProfit {
@@ -92,7 +103,16 @@ export default function FinancePage() {
     profitMargin: 0,
     vatCollected: 0,
     discountsGiven: 0,
-    netRevenue: 0
+    netRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0
+  });
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expenseData, setExpenseData] = useState({
+    category: 'Other',
+    amount: '',
+    description: ''
   });
   const [chartData, setChartData] = useState<Array<{ date: string; revenue: number; profit: number }>>([]);
   const [paymentData, setPaymentData] = useState<Array<{ name: string; value: number }>>([]);
@@ -175,6 +195,34 @@ export default function FinancePage() {
   useEffect(() => {
     fetchInitialInfo();
   }, [fetchInitialInfo]);
+
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.tenant_id) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.from('expenses').insert({
+        tenant_id: profile.tenant_id,
+        category: expenseData.category,
+        amount: Number(expenseData.amount),
+        description: expenseData.description,
+        created_by: profile.id
+      });
+
+      if (error) throw error;
+      
+      toast.success('Expense logged successfully');
+      setIsExpenseModalOpen(false);
+      setExpenseData({ category: 'Other', amount: '', description: '' });
+      fetchFinanceData();
+    } catch (err) {
+      console.error('Error logging expense:', err);
+      toast.error('Failed to log expense');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchFinanceData = useCallback(async () => {
     if (!tenantId) return;
@@ -271,7 +319,9 @@ export default function FinancePage() {
         profitMargin: netRev ? (grossProfit / netRev) * 100 : 0,
         vatCollected: totalVat,
         discountsGiven: totalDiscount,
-        netRevenue: netRev
+        netRevenue: netRev,
+        totalExpenses: 0,
+        netProfit: grossProfit
       });
 
       setChartData(Object.entries(dailyMap).map(([date, vals]) => ({
@@ -286,6 +336,26 @@ export default function FinancePage() {
       })));
 
       setProductProfitData(Object.values(prodMap).sort((a, b) => b.profit - a.profit));
+
+      // Fetch Expenses
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (expensesData) {
+        setExpenses(expensesData);
+        const totalExp = expensesData.reduce((acc, e) => acc + Number(e.amount), 0);
+        const netProfit = grossProfit - totalExp;
+
+        setMetrics(prev => ({
+          ...prev,
+          totalExpenses: totalExp,
+          netProfit: netProfit
+        }));
+      }
 
     } catch (error: unknown) {
       console.error('Finance Fetch Error:', error);
@@ -360,21 +430,23 @@ export default function FinancePage() {
             <Calendar size={14} />
             End Day Summary
           </button>
+
+          <button 
+            onClick={() => setIsExpenseModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3.5 bg-red-500 text-white rounded-[22px] text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/10"
+          >
+            <DollarSign size={14} />
+            Log Expense
+          </button>
         </div>
       </div>
 
       {/* Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard title="Gross Revenue" value={metrics.grossRevenue} subValue="Total Sales Value" icon={DollarSign} trend={12} />
-        <MetricCard title="Cost of Goods" value={metrics.cogs} subValue="Total Buying Cost" icon={ShoppingBag} />
-        <MetricCard 
-          title="Gross Profit" 
-          value={metrics.grossProfit} 
-          subValue="Revenue - Cost" 
-          icon={TrendingUp} 
-          className={metrics.grossProfit > 0 ? "text-green-600" : "text-red-600"}
-        />
-        <MetricCard title="Profit Margin" value={Math.round(metrics.profitMargin)} subValue="Efficiency Rate" icon={Percent} prefix="" trend={2} />
+        <MetricCard title="Gross Profit" value={metrics.grossProfit} subValue="Revenue - COGS" icon={TrendingUp} className="text-emerald-500" />
+        <MetricCard title="Total Expenses" value={metrics.totalExpenses} subValue="Operating Costs" icon={Tag} className="text-red-500" />
+        <MetricCard title="Net Profit" value={metrics.netProfit} subValue="Final Earnings" icon={TrendingUp} className={metrics.netProfit > 0 ? "text-brand-green" : "text-red-500"} />
       </div>
 
       {/* Secondary Metrics */}
@@ -548,6 +620,86 @@ export default function FinancePage() {
           )}
         </Table>
       </div>
+
+      {/* Expenses History */}
+      <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden mt-8">
+        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+          <h3 className="text-2xl font-black text-brand-dark tracking-tighter">Operating Expenses</h3>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recent Activity</p>
+        </div>
+        <Table headers={['Date', 'Category', 'Description', 'Amount']} loading={loading}>
+          {expenses.length > 0 ? expenses.map((e) => (
+            <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
+              <td className="px-6 py-5 text-gray-500 font-medium">
+                {new Date(e.created_at).toLocaleDateString()}
+              </td>
+              <td className="px-6 py-5">
+                <Badge variant="gray" className="font-black px-4 py-1 border-gray-100 text-gray-400 bg-gray-50 uppercase tracking-widest text-[10px]">
+                  {e.category}
+                </Badge>
+              </td>
+              <td className="px-6 py-5 text-gray-600 font-medium italic">{e.description || '—'}</td>
+              <td className="px-6 py-5 font-black text-red-500">
+                - {Number(e.amount).toLocaleString()} KES
+              </td>
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={4} className="py-20 text-center text-gray-400 font-medium italic">No expenses recorded for this period.</td>
+            </tr>
+          )}
+        </Table>
+      </div>
+
+      {/* Log Expense Modal */}
+      <Modal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        title="Log Business Expense"
+        size="md"
+      >
+        <form onSubmit={handleAddExpense} className="space-y-6">
+          <div className="space-y-1.5 focus-within:scale-[1.01] transition-transform">
+             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Expense Category*</label>
+             <select 
+               className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-4 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all shadow-sm"
+               value={expenseData.category}
+               required
+               onChange={(e) => setExpenseData({...expenseData, category: e.target.value})}
+             >
+               {['Inventory', 'Rent', 'Utilities', 'Wages', 'Transport', 'Marketing', 'Maintenance', 'Software', 'Taxes', 'Other'].map(cat => (
+                 <option key={cat} value={cat}>{cat}</option>
+               ))}
+             </select>
+          </div>
+
+          <Input 
+            label="Amount (KES)*"
+            type="number"
+            required
+            value={expenseData.amount}
+            placeholder="0.00"
+            onChange={(e) => setExpenseData({...expenseData, amount: e.target.value})}
+          />
+
+          <div className="space-y-1.5 focus-within:scale-[1.01] transition-transform">
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Description</label>
+            <textarea 
+              className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-4 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all min-h-[100px] shadow-sm"
+              placeholder="What was this expense for?"
+              value={expenseData.description}
+              onChange={(e) => setExpenseData({...expenseData, description: e.target.value})}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-50">
+            <Button type="button" variant="ghost" onClick={() => setIsExpenseModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Logging...' : 'Confirm Expense'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

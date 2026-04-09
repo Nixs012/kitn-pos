@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   BarChart, 
   Bar, 
@@ -112,6 +113,8 @@ export default function SalesReportsPage() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const searchParams = useSearchParams();
+  const receiptId = searchParams.get('receipt');
   const pageSize = 20;
 
   const supabase = createClient();
@@ -209,6 +212,17 @@ export default function SalesReportsPage() {
     fetchSalesData();
     document.title = 'Sales Reports — KiTN POS';
   }, [fetchSalesData]);
+
+  // Handle auto-open of receipt from search
+  useEffect(() => {
+    if (receiptId && sales.length > 0) {
+      const sale = sales.find(s => s.id === receiptId);
+      if (sale) {
+        setSelectedSale(sale);
+        setIsReceiptOpen(true);
+      }
+    }
+  }, [receiptId, sales]);
 
   const exportCSV = () => {
     const headers = ['Receipt #', 'Date', 'Cashier', 'Method', 'Tax', 'Discount', 'Total'];

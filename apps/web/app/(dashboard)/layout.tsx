@@ -7,6 +7,7 @@ import NavigationProgress from '@/components/layout/NavigationProgress';
 import NotificationBell from '@/components/layout/NotificationBell';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { UserHydrator } from '@/components/auth/UserHydrator';
+import GlobalSearch from '@/components/layout/GlobalSearch';
 
 export default async function DashboardLayout({
   children,
@@ -59,6 +60,10 @@ export default async function DashboardLayout({
               <span className="w-1 h-1 rounded-full bg-brand-green" />
             </h2>
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{currentDate}</p>
+          </div>
+
+          <div className="flex-1 max-w-md px-10">
+            <GlobalSearch />
           </div>
           
           <div className="flex items-center gap-6">

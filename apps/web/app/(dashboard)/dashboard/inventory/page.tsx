@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Package, 
   AlertTriangle, 
@@ -47,6 +48,8 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const searchParams = useSearchParams();
+  const searchId = searchParams.get('search');
   
   // Modals state
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
@@ -191,11 +194,14 @@ export default function InventoryPage() {
   const outOfStockCount = inventory.filter(i => i.inventory[0].quantity === 0).length;
   const totalProducts = inventory.length;
 
-  const filteredInventory = inventory.filter(i => 
-    i.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    i.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredInventory = inventory.filter(i => {
+    if (searchId && i.id === searchId) return true;
+    if (searchId) return false; // If searching for a specific ID, don't show others
+    
+    return i.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+           i.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           i.category.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

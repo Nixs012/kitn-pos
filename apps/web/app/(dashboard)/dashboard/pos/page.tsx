@@ -160,6 +160,8 @@ export default function PosPage() {
   // M-Pesa Integration States
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [isWaitingForMpesa, setIsWaitingForMpesa] = useState(false);
+  const [currentCheckoutId, setCurrentCheckoutId] = useState<string | null>(null);
+  const [mpesaPollCount, setMpesaPollCount] = useState(0);
 
   // Global Barcode Scanner Listener
   useBarcodeScanner({
@@ -394,16 +396,81 @@ export default function PosPage() {
       if (!data.success) throw new Error(data.error);
 
       toast.success('STK Push sent! Please enter your PIN on your phone.');
+      setCurrentCheckoutId(data.checkoutRequestID);
+      setMpesaPollCount(0);
       
       // The callback (on the server) will update the mpesa_ref when it arrives.
-      // We don't need a timeout anymore. The sale record is already there.
-
+      // We'll also start a polling check
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'M-Pesa push failed';
       toast.error(message);
       setIsWaitingForMpesa(false);
     }
   };
+
+  const verifyMpesaPayment = useCallback(async () => {
+    if (!currentCheckoutId) return;
+
+    try {
+      const res = await fetch(`/api/mpesa/status/${currentCheckoutId}`);
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        // Success! The sale is already created, just needs to show it.
+        // We fetch the sale record again to get all its details
+        const { data: saleData } = await supabase
+          .from('sales')
+          .select('*, user_profiles(full_name), sale_items(*, products(name))')
+          .eq('mpesa_ref', data.receipt) // Now it has the receipt
+          .single();
+
+        if (saleData) {
+          const rawItems = (saleData.sale_items || []) as Array<{ 
+            products: { name: string } | null; 
+            unit_price: number; 
+            [key: string]: unknown 
+          }>;
+
+          const mappedItems = rawItems.map(i => ({ 
+            ...i, 
+            name: i.products?.name || 'Unknown Item', 
+            price: i.unit_price 
+          }));
+          
+          setLastSale({ 
+            ...saleData, 
+            items: mappedItems as unknown as SaleItem[]
+          });
+          setIsWaitingForMpesa(false);
+          setIsMpesaModalOpen(false);
+          setIsReceiptModalOpen(true);
+          clearCart();
+          setDiscount(0);
+          toast.success('M-Pesa Payment Verified!');
+          setCurrentCheckoutId(null);
+          fetchInitialData();
+        }
+      } else if (data.status === 'pending') {
+        if (mpesaPollCount > 0) {
+          // toast.info('Still waiting for payment...');
+        }
+      }
+    } catch (err) {
+      console.error('Verify error:', err);
+    }
+  }, [currentCheckoutId, mpesaPollCount, supabase, clearCart, setDiscount, fetchInitialData]);
+
+  // Handle auto-polling
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isWaitingForMpesa && currentCheckoutId) {
+      timer = setInterval(() => {
+        setMpesaPollCount(p => p + 1);
+        verifyMpesaPayment();
+      }, 5000); // Check every 5 seconds
+    }
+    return () => clearInterval(timer);
+  }, [isWaitingForMpesa, currentCheckoutId, verifyMpesaPayment]);
 
   const [showMobileCart, setShowMobileCart] = useState(false);
 
@@ -721,7 +788,10 @@ export default function PosPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <p className="text-[10px] text-gray-400 font-bold animate-pulse">DO NOT CLOSE THIS MODAL UNTIL PAYMENT IS COMPLETE</p>
-                  <Button variant="ghost" onClick={() => setIsWaitingForMpesa(false)} className="text-red-500 hover:bg-red-50">Cancel Request</Button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" onClick={() => verifyMpesaPayment()} className="text-[10px] uppercase font-black py-4">Manual Verify</Button>
+                    <Button variant="ghost" onClick={() => { setIsWaitingForMpesa(false); setCurrentCheckoutId(null); }} className="text-red-500 hover:bg-red-50 text-[10px] uppercase font-black py-4">Cancel Request</Button>
+                  </div>
                 </div>
               </div>
             )}
