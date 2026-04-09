@@ -229,7 +229,7 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-[12px] border-[0.5px] border-[#E8E8E8] shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-black text-brand-dark text-sm uppercase tracking-tight">Top selling products today</h3>
-            <button className="text-brand-blue text-[10px] font-bold hover:underline">VIEW ALL</button>
+            <Link href="/dashboard/reports/sales" className="text-brand-blue text-[10px] font-bold hover:underline">VIEW ALL</Link>
           </div>
           
           <div className="space-y-5">
@@ -309,9 +309,12 @@ export default function DashboardPage() {
             </table>
           </div>
           
-          <button className="w-full mt-4 py-2 border-2 border-dashed border-gray-100 rounded-xl text-[10px] font-bold text-gray-400 hover:border-brand-blue hover:text-brand-blue transition-all flex items-center justify-center gap-1.5">
+          <Link 
+            href="/dashboard/reports/sales"
+            className="w-full mt-4 py-2 border-2 border-dashed border-gray-100 rounded-xl text-[10px] font-bold text-gray-400 hover:border-brand-blue hover:text-brand-blue transition-all flex items-center justify-center gap-1.5"
+          >
             VIEW FULL HISTORY <ChevronRight size={12} />
-          </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,67 +1,68 @@
-# KiTN POS — System Audit (April 2026)
+# KiTN POS — System Audit & Progress Report (v1.2.0)
 
-This document provides a comprehensive status report on the current state of the KiTN POS platform. Features are categorized by their implementation status to guide further development and project management.
-
----
-
-## 🟢 Fully Completed
-These modules are fully integrated, tested for core functionality, connected to the backend, and ready for production use.
-
-### 1. Authentication & Onboarding
-- **Features**: Single Sign-On, Business Creation, Multi-step onboarding (Business details, Initial Inventory).
-- **Status**: Production-ready.
-
-### 2. POS Terminal (Core Engine)
-- **Features**: Barcode scanning (camera & physical), real-time cart, checkout (Cash/Mpesa/Card), receipt generation, stock-out prevention.
-- **Status**: Production-ready.
-
-### 3. Inventory Management
-- **Features**: Product CRUD, category management, batch reordering, stock adjustments, low-stock notifications (`014` table).
-- **Status**: Production-ready.
-
-### 4. Sales Reports & Analytics
-- **Features**: Real-time KPI cards, sales trends (bar charts), detailed transaction logs, CSV export.
-- **Status**: Production-ready.
-
-### 5. Finance Module
-- **Features**: Profit & Loss tracking, expense categorization, revenue by branch, subscription gating (basic tier).
-- **Status**: Production-ready.
-
-### 6. Team & Performance
-- **Features**: Shift tracking (clock-in/out), live leaderboard, sales-by-staff metrics.
-- **Status**: Production-ready.
-
-### 7. Multi-Branch (Outlets)
-- **Features**: Branch creation, stock transfers between outlets, branch-specific inventory views.
-- **Status**: Production-ready.
+This document tracks the functional status of all platform modules, identifying stable areas and those requiring further development.
 
 ---
 
-## 🟡 Partially Completed
-These features are integrated into the main flow but require live environment testing or additional depth for specific edge cases.
+## ✅ Completed (Production Ready)
+These modules are fully integrated with the backend and feature a polished UI.
+
+### 1. POS Terminal Engine
+- **Features**: Physical/Camera Barcode scanning, STK Push (Interface), Dynamic Cart, Receipt generation.
+- **Backend**: `sales`, `sales_items` tables fully utilized.
+
+### 2. Core Dashboard & Navigation
+- **Features**: KPI metrics (Real-time), Deep-link Breadcrumbs, Mobile-responsive bottom navigation.
+- **UX**: All "View All" and "History" links are functional.
+
+### 3. Inventory & Product Management
+- **Features**: SKU tracking, Low-stock alerts, Category filtering, Bulk CSV import.
+- **Backend**: `products` table with heads/exact count triggers.
+
+### 4. Sales Reporting 
+- **Features**: Interactive Recharts graphs, Date range filtering, Receipt auditing, CSV exports.
+
+### 5. Multi-Branch (Outlets)
+- **Features**: Branch creation, Stock transfers between outlets, Branch-specific stock views.
+- **Backend**: `branches` and `inventory_movements` tables.
+
+### 6. Team & Shift Management
+- **Features**: Digital shift clock (Clock-in/out), Sales-by-staff leaderboards, Activity logs.
+- **Backend**: `shifts` table integrated with user profiles.
+
+### 7. Superadmin Panel 
+- **Features**: Global business overview, Total revenue tracking, Access restricted to `@kitnpos.co.ke` domain.
+
+---
+
+## 🚧 Partial (Integrated but Needs Polish/Testing)
+These features exist in the code but require production environment verification.
 
 ### 1. MPesa Integration
-- **Status**: Backend logic for C2B/B2C callbacks exists, but requires live API key configuration and production environment verification.
+- **Status**: Backend logic for callbacks exists in `/api/mpesa`, but needs Live environmental testing for STK Push reliability.
 
-### 2. Offline Mode & Sync
-- **Status**: Service Worker and Dexie.js (local DB) setup are present in the core, but stress-testing for large datasets during prolonged offline periods is pending.
+### 2. Global Search & Notifications
+- **Status**: Notifications table (`014`) is live. UI toast for low stock is integrated. Global search needs better fuzzy-matching.
 
-### 3. Settings & Configuration
-- **Status**: Core business and user settings are complete. Advanced "Device Management" (MAC address binding) is currently in placeholder stage.
+### 3. Finance & Profit tracking
+- **Status**: Basic P&L is live. Subscription gating (`UpgradePrompt`) is enforced. Needs more expense categories.
 
----
-
-## 🔴 Not Completed / Future Roadmap
-Features that are not yet part of the active codebase or UI.
-
-- **Help & Support Center**: Integrated ticketing/chat system.
-- **AI Predictive Restocking**: Forecast sales using historical data.
-- **Customer Loyalty Program**: Points system and member discounts.
+### 4. Settings & Permissions
+- **Status**: Role-based access control (RBAC) works in UI. Backend policies for `Cashier` role need stricter coverage.
 
 ---
 
-## 🏗️ Technical Health
-- **Framework**: Next.js 14 (App Router).
-- **Type Safety**: TypeScript used throughout; all `any` types resolved in recent pass.
-- **Database**: Supabase (PostgreSQL) with 14 migrations currently live.
-- **Real-time**: Enabled via Supabase Realtime for notifications and dashboard updates.
+## 📅 Not Complete (Future Roadmap)
+Features planned for future versioning.
+
+- **Offline Sync (v2.0)**: Advanced conflict resolution for multi-day offline outages.
+- **Tax Compliance (TIMS)**: Full integration with KRA iTax/TIMS devices for fiscalized receipts.
+- **Customer Loyalty**: Member points system and discount automation.
+- **Payroll Automation**: Automated payslip generation from shift logs.
+
+---
+
+## 🛠️ Technical Health
+- **Stack**: Next.js 14, Tailwind CSS, Supabase, Lucide React, Recharts.
+- **Real-time**: Enabled on Dashboard and POS for instant updates.
+- **Type Safety**: Strictly enforced. No `any` types remaining in core logic.
