@@ -25,6 +25,8 @@ import Image from 'next/image';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import Papa from 'papaparse';
+import { productSchema } from '@/lib/validations/schemas';
+import FormError from '@/components/ui/FormError';
 
 
 // Components
@@ -77,6 +79,7 @@ export default function ProductsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Form states
   const [formData, setFormData] = useState({
@@ -196,8 +199,22 @@ export default function ProductsPage() {
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
     try {
       if (!profile) return;
+
+      // Validate with Zod
+      const validation = productSchema.safeParse(formData);
+      if (!validation.success) {
+        const newErrors: Record<string, string> = {};
+        validation.error.issues.forEach(err => {
+          if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+        });
+        setErrors(newErrors);
+        toast.showError('Please fix the errors in the form');
+        return;
+      }
 
       const product = await safeQuery<Product>(
         () => supabase
@@ -252,6 +269,19 @@ export default function ProductsPage() {
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentProduct) return;
+    setErrors({});
+
+    // Validate with Zod
+    const validation = productSchema.safeParse(formData);
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
+      return;
+    }
 
     const success = await safeQuery(
       () => supabase
@@ -617,13 +647,16 @@ export default function ProductsPage() {
       >
         <form onSubmit={isAddModalOpen ? handleAddProduct : handleEditProduct} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input 
-              label="Product Name*" 
-              required 
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              placeholder="e.g. Premium Basmati Rice"
-            />
+            <div className="space-y-1">
+              <Input 
+                label="Product Name*" 
+                required 
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                placeholder="e.g. Premium Basmati Rice"
+              />
+              <FormError message={errors.name} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="relative">
                 <Input 
@@ -633,6 +666,7 @@ export default function ProductsPage() {
                   placeholder="600123..."
                   className="pr-12"
                 />
+                <FormError message={errors.barcode} />
                 <button 
                   type="button"
                   onClick={() => setIsScannerOpen(!isScannerOpen)}
@@ -641,12 +675,15 @@ export default function ProductsPage() {
                   <Camera size={16} />
                 </button>
               </div>
-              <Input 
-                label="SKU" 
-                value={formData.sku}
-                onChange={e => setFormData({...formData, sku: e.target.value})}
-                placeholder="PROD-001"
-              />
+              <div className="space-y-1">
+                <Input 
+                  label="SKU" 
+                  value={formData.sku}
+                  onChange={e => setFormData({...formData, sku: e.target.value})}
+                  placeholder="PROD-001"
+                />
+                <FormError message={errors.sku} />
+              </div>
             </div>
 
             {isScannerOpen && (
@@ -723,23 +760,30 @@ export default function ProductsPage() {
                     </option>
                   ))}
               </select>
+              <FormError message={errors.category} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Input 
-                label="Buying Price (KES)*" 
-                type="number" 
-                required 
-                value={formData.buying_price}
-                onChange={e => setFormData({...formData, buying_price: Number(e.target.value)})}
-              />
-              <Input 
-                label="Selling Price (KES)*" 
-                type="number" 
-                required 
-                value={formData.selling_price}
-                onChange={e => setFormData({...formData, selling_price: Number(e.target.value)})}
-              />
+              <div className="space-y-1">
+                <Input 
+                  label="Buying Price (KES)*" 
+                  type="number" 
+                  required 
+                  value={formData.buying_price}
+                  onChange={e => setFormData({...formData, buying_price: Number(e.target.value)})}
+                />
+                <FormError message={errors.buying_price} />
+              </div>
+              <div className="space-y-1">
+                <Input 
+                  label="Selling Price (KES)*" 
+                  type="number" 
+                  required 
+                  value={formData.selling_price}
+                  onChange={e => setFormData({...formData, selling_price: Number(e.target.value)})}
+                />
+                <FormError message={errors.selling_price} />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -767,16 +811,20 @@ export default function ProductsPage() {
                       </option>
                     ))}
                 </select>
+                <FormError message={errors.unit} />
               </div>
             </div>
 
             {isAddModalOpen && (
-              <Input 
-                label="Initial Stock Quantity" 
-                type="number" 
-                value={formData.initial_stock}
-                onChange={e => setFormData({...formData, initial_stock: Number(e.target.value)})}
-              />
+              <div className="space-y-1">
+                <Input 
+                  label="Initial Stock Quantity" 
+                  type="number" 
+                  value={formData.initial_stock}
+                  onChange={e => setFormData({...formData, initial_stock: Number(e.target.value)})}
+                />
+                <FormError message={errors.initial_stock} />
+              </div>
             )}
           </div>
 

@@ -33,6 +33,8 @@ import Input from '@/components/ui/Input';
 import Table from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
+import { userSchema, pinResetSchema } from '@/lib/validations/schemas';
+import FormError from '@/components/ui/FormError';
 
 const COUNTIES = [
   'Nairobi', 'Mombasa', 'Kwale', 'Kilifi', 'Tana River', 'Lamu', 'Taita Taveta', 'Garissa', 'Wajir', 'Mandera', 'Marsabit', 'Isiolo', 'Meru', 'Tharaka-Nithi', 'Embu', 'Kitui', 'Machakos', 'Makueni', 'Nyandarua', 'Nyeri', 'Kirinyaga', 'Murang\'a', 'Kiambu', 'Turkana', 'West Pokot', 'Samburu', 'Trans Nzoia', 'Uasin Gishu', 'Elgeyo-Marakwet', 'Nandi', 'Baringo', 'Laikipia', 'Nakuru', 'Narok', 'Kajiado', 'Kericho', 'Bomet', 'Kakamega', 'Vihiga', 'Bungoma', 'Busia', 'Siaya', 'Kisumu', 'Homa Bay', 'Migori', 'Kisii', 'Nyamira'
@@ -641,6 +643,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
 
   const [pinData, setPinData] = useState({ pin: '', confirmPin: '' });
   const [createdUserDetails, setCreatedUserDetails] = useState<ICreationDetails | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
@@ -651,6 +654,21 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+
+    // Validate with Zod
+    const validation = userSchema.safeParse(addFormData);
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch('/api/users/create', {
@@ -696,6 +714,21 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
+    setErrors({});
+
+    // Partial validation for editing
+    const validation = userSchema.partial().safeParse(editFormData);
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch('/api/users/update', {
@@ -724,10 +757,21 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
   const handleResetPin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    if (pinData.pin !== pinData.confirmPin) {
-      toast.showError('PINs do not match');
+    setErrors({});
+
+    // Validate with Zod
+    const validation = pinResetSchema.safeParse(pinData);
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
       return;
     }
+
     try {
       setLoading(true);
       const response = await fetch('/api/users/update', {
@@ -927,10 +971,19 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       {/* Add User Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New User" size="md">
         <form onSubmit={handleCreateUser} className="space-y-6">
-          <Input label="Full Name*" required value={addFormData.full_name} onChange={e => setAddFormData({...addFormData, full_name: e.target.value})} />
+          <div className="space-y-1">
+            <Input label="Full Name*" required value={addFormData.full_name} onChange={e => setAddFormData({...addFormData, full_name: e.target.value})} />
+            <FormError message={errors.full_name} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Email Address*" type="email" required value={addFormData.email} onChange={e => setAddFormData({...addFormData, email: e.target.value})} />
-            <Input label="Phone Number" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} />
+            <div className="space-y-1">
+              <Input label="Email Address*" type="email" required value={addFormData.email} onChange={e => setAddFormData({...addFormData, email: e.target.value})} />
+              <FormError message={errors.email} />
+            </div>
+            <div className="space-y-1">
+              <Input label="Phone Number" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} />
+              <FormError message={errors.phone} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -942,6 +995,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
               >
                 {ROLES.filter(r => r.value !== 'admin').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
+              <FormError message={errors.role} />
             </div>
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Branch Access</label>
@@ -952,13 +1006,18 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
+              <FormError message={errors.branch_id} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Initial 4-Digit PIN*" type="password" maxLength={4} required value={addFormData.pin} onChange={e => setAddFormData({...addFormData, pin: e.target.value})} />
-            <div className="relative">
+            <div className="space-y-1">
+              <Input label="Initial 4-Digit PIN*" type="password" maxLength={4} required value={addFormData.pin} onChange={e => setAddFormData({...addFormData, pin: e.target.value})} />
+              <FormError message={errors.pin} />
+            </div>
+            <div className="relative space-y-1">
                 <Input label="Temporary Password*" type="text" required value={addFormData.password} onChange={e => setAddFormData({...addFormData, password: e.target.value})} />
                 <button type="button" onClick={generatePassword} className="absolute right-3 bottom-3 text-[9px] font-black text-brand-green uppercase hover:underline">Auto-Gen</button>
+                <FormError message={errors.password} />
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
@@ -995,9 +1054,15 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       {/* Edit User Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit User Profile" size="md">
         <form onSubmit={handleUpdateProfile} className="space-y-6">
-          <Input label="Full Name*" required value={editFormData.full_name} onChange={e => setEditFormData({...editFormData, full_name: e.target.value})} />
+          <div className="space-y-1">
+            <Input label="Full Name*" required value={editFormData.full_name} onChange={e => setEditFormData({...editFormData, full_name: e.target.value})} />
+            <FormError message={errors.full_name} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
-             <Input label="Phone Number" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} />
+             <div className="space-y-1">
+               <Input label="Phone Number" value={editFormData.phone} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} />
+               <FormError message={errors.phone} />
+             </div>
              <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">System Role</label>
               <select 
@@ -1007,6 +1072,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
               >
                 {ROLES.filter(r => r.value !== 'admin').map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
+              <FormError message={errors.role} />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -1018,6 +1084,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
             >
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
+            <FormError message={errors.branch_id} />
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
             <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
@@ -1029,8 +1096,14 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
       {/* Reset PIN Modal */}
       <Modal isOpen={isPinModalOpen} onClose={() => setIsPinModalOpen(false)} title={`Reset PIN for ${selectedUser?.full_name}`} size="sm">
         <form onSubmit={handleResetPin} className="space-y-6">
-            <Input label="New 4-Digit PIN*" type="password" maxLength={4} required value={pinData.pin} onChange={e => setPinData({...pinData, pin: e.target.value})} />
-            <Input label="Confirm New PIN*" type="password" maxLength={4} required value={pinData.confirmPin} onChange={e => setPinData({...pinData, confirmPin: e.target.value})} />
+            <div className="space-y-1">
+                <Input label="New 4-Digit PIN*" type="password" maxLength={4} required value={pinData.pin} onChange={e => setPinData({...pinData, pin: e.target.value})} />
+                <FormError message={errors.pin} />
+            </div>
+            <div className="space-y-1">
+                <Input label="Confirm New PIN*" type="password" maxLength={4} required value={pinData.confirmPin} onChange={e => setPinData({...pinData, confirmPin: e.target.value})} />
+                <FormError message={errors.confirmPin} />
+            </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
                 <Button type="button" variant="ghost" onClick={() => setIsPinModalOpen(false)}>Cancel</Button>
                 <Button type="submit" loading={loading}>Update PIN</Button>

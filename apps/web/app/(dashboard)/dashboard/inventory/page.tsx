@@ -23,6 +23,8 @@ import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SkeletonCard, SkeletonTableRow } from '@/components/ui/Skeleton';
+import { restockSchema, adjustmentSchema } from '@/lib/validations/schemas';
+import FormError from '@/components/ui/FormError';
 
 interface InventoryItem {
   id: string; // product id
@@ -71,6 +73,7 @@ export default function InventoryPage() {
     newQuantity: '',
     reason: REASONS[0]
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -123,6 +126,24 @@ export default function InventoryPage() {
   const handleRestock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct || !branchId) return;
+    setErrors({});
+
+    // Validate with Zod
+    const validation = restockSchema.safeParse({
+      quantity: Number(restockData.quantity),
+      supplier: restockData.supplier,
+      cost: restockData.cost ? Number(restockData.cost) : undefined
+    });
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
+      return;
+    }
 
     try {
       const addedQty = Number(restockData.quantity);
@@ -174,6 +195,24 @@ export default function InventoryPage() {
     e.preventDefault();
     const product = inventory.find(p => p.id === adjustmentData.productId);
     if (!product || !branchId) return;
+    setErrors({});
+
+    // Validate with Zod
+    const validation = adjustmentSchema.safeParse({
+      productId: adjustmentData.productId,
+      newQuantity: Number(adjustmentData.newQuantity),
+      reason: adjustmentData.reason
+    });
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
+      return;
+    }
 
     try {
       const newQty = Number(adjustmentData.newQuantity);
@@ -414,32 +453,40 @@ export default function InventoryPage() {
                 <option value="">Choose item to restock...</option>
                 {inventory.map(i => <option key={i.id} value={i.id}>{i.name} ({i.sku})</option>)}
               </select>
+              <FormError message={errors.productId} />
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input 
-              label="Quantity to Add*" 
-              type="number" 
-              required 
-              value={restockData.quantity}
-              onChange={e => setRestockData({...restockData, quantity: e.target.value})}
-              placeholder="e.g. 50"
-            />
-            <Input 
-              label="Cost per Unit (KES)" 
-              type="number" 
-              value={restockData.cost}
-              onChange={e => setRestockData({...restockData, cost: e.target.value})}
-              placeholder="0.00"
-            />
-            <div className="md:col-span-2">
+            <div className="space-y-1">
+              <Input 
+                label="Quantity to Add*" 
+                type="number" 
+                required 
+                value={restockData.quantity}
+                onChange={e => setRestockData({...restockData, quantity: e.target.value})}
+                placeholder="e.g. 50"
+              />
+              <FormError message={errors.quantity} />
+            </div>
+            <div className="space-y-1">
+              <Input 
+                label="Cost per Unit (KES)" 
+                type="number" 
+                value={restockData.cost}
+                onChange={e => setRestockData({...restockData, cost: e.target.value})}
+                placeholder="0.00"
+              />
+              <FormError message={errors.cost} />
+            </div>
+            <div className="md:col-span-2 space-y-1">
               <Input 
                 label="Supplier Name" 
                 value={restockData.supplier}
                 onChange={e => setRestockData({...restockData, supplier: e.target.value})}
                 placeholder="e.g. Brookside Dairy Ltd"
               />
+              <FormError message={errors.supplier} />
             </div>
           </div>
 
@@ -470,17 +517,21 @@ export default function InventoryPage() {
                 <option value="">Choose item to adjust...</option>
                 {inventory.map(i => <option key={i.id} value={i.id}>{i.name} (Current: {i.inventory[0].quantity} {i.unit})</option>)}
               </select>
+              <FormError message={errors.productId} />
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-              <Input 
-                label="New Total Quantity*" 
-                type="number" 
-                required 
-                value={adjustmentData.newQuantity}
-                onChange={e => setAdjustmentData({...adjustmentData, newQuantity: e.target.value})}
-                placeholder="Corrected count"
-              />
+              <div className="space-y-1">
+                <Input 
+                  label="New Total Quantity*" 
+                  type="number" 
+                  required 
+                  value={adjustmentData.newQuantity}
+                  onChange={e => setAdjustmentData({...adjustmentData, newQuantity: e.target.value})}
+                  placeholder="Corrected count"
+                />
+                <FormError message={errors.newQuantity} />
+              </div>
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Reason for Adjustment*</label>
                 <select 
@@ -491,6 +542,7 @@ export default function InventoryPage() {
                 >
                   {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
+                <FormError message={errors.reason} />
               </div>
             </div>
 

@@ -29,6 +29,8 @@ import BarcodeScanner from '@/components/pos/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SkeletonProductCard, SkeletonBox } from '@/components/ui/Skeleton';
+import { saleSchema } from '@/lib/validations/schemas';
+import FormError from '@/components/ui/FormError';
 
 
 // --- Types ---
@@ -165,6 +167,7 @@ export default function PosPage() {
   const [isWaitingForMpesa, setIsWaitingForMpesa] = useState(false);
   const [currentCheckoutId, setCurrentCheckoutId] = useState<string | null>(null);
   const [mpesaPollCount, setMpesaPollCount] = useState(0);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Global Barcode Scanner Listener
   useBarcodeScanner({
@@ -268,8 +271,23 @@ export default function PosPage() {
   };
 
   const completeSale = async (method: 'cash' | 'mpesa' | 'card' = 'cash', mpesaRef?: string) => {
-    if (items.length === 0) {
-      toast.showError('Cart is empty');
+    setErrors({});
+    
+    // Validate with Zod
+    const validation = saleSchema.safeParse({
+      items,
+      payment_method: method,
+      discount,
+      mpesa_phone: method === 'mpesa' ? mpesaPhone : undefined
+    });
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError(validation.error.issues[0]?.message || 'Validation failed');
       return null;
     }
 
@@ -393,13 +411,23 @@ export default function PosPage() {
   };
 
   const handleMpesaPush = async () => {
-    if (!mpesaPhone || !totals.total) {
-      toast.showError('Please enter a valid phone number');
-      return;
-    }
+    setErrors({});
+    
+    // Validate with Zod
+    const validation = saleSchema.safeParse({
+      items,
+      payment_method: 'mpesa',
+      mpesa_phone: mpesaPhone,
+      discount
+    });
 
-    if (!/^(07|01|2547|2541|\+2547|\+2541)\d{8}$/.test(mpesaPhone)) {
-      toast.showError('Invalid phone number format');
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError(newErrors.mpesa_phone || 'Invalid M-Pesa details');
       return;
     }
 
@@ -842,14 +870,15 @@ export default function PosPage() {
                 <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 italic space-y-4">
                   <div className="text-left space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">M-Pesa Number</label>
-                    <input 
-                      type="text"
-                      placeholder="0712 XXX XXX"
-                      className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all placeholder:text-gray-300"
-                      value={mpesaPhone}
-                      onChange={(e) => setMpesaPhone(e.target.value)}
-                    />
-                  </div>
+                      <input 
+                        type="text"
+                        placeholder="0712 XXX XXX"
+                        className="w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all placeholder:text-gray-300"
+                        value={mpesaPhone}
+                        onChange={(e) => setMpesaPhone(e.target.value)}
+                      />
+                      <FormError message={errors.mpesa_phone} />
+                    </div>
                 </div>
                 <Button 
                   onClick={handleMpesaPush} 

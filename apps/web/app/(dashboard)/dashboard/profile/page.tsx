@@ -26,6 +26,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
+import { userSchema, passwordChangeSchema, pinResetSchema } from '@/lib/validations/schemas';
+import FormError from '@/components/ui/FormError';
 
 // --- Custom Table Component for reuse ---
 const SimpleTable = ({ headers, children }: { headers: string[], children: React.ReactNode }) => (
@@ -95,6 +97,7 @@ export default function ProfilePage() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -172,7 +175,21 @@ export default function ProfilePage() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    setSaving(true);
+    setErrors({});
+
+    // Validate with Zod
+    const validation = userSchema.partial().safeParse(personalData);
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
+      return;
+    }
+
     setSaving(true);
     try {
       const success = await safeQuery(
@@ -208,15 +225,21 @@ export default function ProfilePage() {
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (securityData.newPassword !== securityData.confirmPassword) {
-      toast.showError('Passwords do not match');
+    setErrors({});
+
+    // Validate with Zod
+    const validation = passwordChangeSchema.safeParse(securityData);
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
       return;
     }
-    if (securityData.newPassword.length < 8) {
-      toast.showError('Password must be at least 8 characters');
-      return;
-    }
-    setSaving(true);
+
     setSaving(true);
     try {
       const success = await safeQuery(
@@ -235,15 +258,21 @@ export default function ProfilePage() {
   const handleUpdatePIN = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    if (securityData.newPIN !== securityData.confirmPIN) {
-      toast.showError('PINs do not match');
+    setErrors({});
+
+    // Validate with Zod
+    const validation = pinResetSchema.safeParse(securityData);
+
+    if (!validation.success) {
+      const newErrors: Record<string, string> = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) newErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(newErrors);
+      toast.showError('Please fix the errors in the form');
       return;
     }
-    if (securityData.newPIN.length !== 4) {
-      toast.showError('PIN must be 4 digits');
-      return;
-    }
-    setSaving(true);
+
     setSaving(true);
     try {
       const success = await safeQuery(
@@ -464,32 +493,44 @@ export default function ProfilePage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                  <Input 
-                    label="Full Identification Name*" 
-                    value={personalData.full_name} 
-                    onChange={e => setPersonalData({ ...personalData, full_name: e.target.value })} 
-                    placeholder="Enter your full name" 
-                    required 
-                  />
-                  <Input 
-                    label="Official Email Address*" 
-                    value={personalData.email} 
-                    onChange={e => setPersonalData({ ...personalData, email: e.target.value })} 
-                    placeholder="your@email.com" 
-                    required 
-                  />
-                  <Input 
-                    label="Active Phone Number" 
-                    value={personalData.phone} 
-                    onChange={e => setPersonalData({ ...personalData, phone: e.target.value })} 
-                    placeholder="07XX XXX XXX" 
-                  />
-                  <Input 
-                    label="National ID Number" 
-                    value={personalData.id_number} 
-                    onChange={e => setPersonalData({ ...personalData, id_number: e.target.value })} 
-                    placeholder="ID / Passport Number" 
-                  />
+                  <div className="space-y-1">
+                    <Input 
+                      label="Full Identification Name*" 
+                      value={personalData.full_name} 
+                      onChange={e => setPersonalData({ ...personalData, full_name: e.target.value })} 
+                      placeholder="Enter your full name" 
+                      required 
+                    />
+                    <FormError message={errors.full_name} />
+                  </div>
+                  <div className="space-y-1">
+                    <Input 
+                      label="Official Email Address*" 
+                      value={personalData.email} 
+                      onChange={e => setPersonalData({ ...personalData, email: e.target.value })} 
+                      placeholder="your@email.com" 
+                      required 
+                    />
+                    <FormError message={errors.email} />
+                  </div>
+                  <div className="space-y-1">
+                    <Input 
+                      label="Active Phone Number" 
+                      value={personalData.phone} 
+                      onChange={e => setPersonalData({ ...personalData, phone: e.target.value })} 
+                      placeholder="07XX XXX XXX" 
+                    />
+                    <FormError message={errors.phone} />
+                  </div>
+                  <div className="space-y-1">
+                    <Input 
+                      label="National ID Number" 
+                      value={personalData.id_number} 
+                      onChange={e => setPersonalData({ ...personalData, id_number: e.target.value })} 
+                      placeholder="ID / Passport Number" 
+                    />
+                    <FormError message={errors.id_number} />
+                  </div>
                   <div className="space-y-3">
                     <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest ml-1">Home County</label>
                     <select 
@@ -499,6 +540,7 @@ export default function ProfilePage() {
                     >
                       {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
+                    <FormError message={errors.county} />
                   </div>
                 </div>
 
@@ -528,20 +570,26 @@ export default function ProfilePage() {
                     <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
                       <Lock size={120} />
                     </div>
-                    <Input 
-                      label="Current Verification Password" 
-                      type="password" 
-                      value={securityData.currentPassword} 
-                      onChange={e => setSecurityData({ ...securityData, currentPassword: e.target.value })} 
-                    />
+                    <div className="space-y-1">
+                      <Input 
+                        label="Current Verification Password" 
+                        type="password" 
+                        value={securityData.currentPassword} 
+                        onChange={e => setSecurityData({ ...securityData, currentPassword: e.target.value })} 
+                      />
+                      <FormError message={errors.currentPassword} />
+                    </div>
                     <div className="hidden md:block" />
                     <div className="space-y-4">
-                      <Input 
-                        label="New Account Password" 
-                        type="password" 
-                        value={securityData.newPassword} 
-                        onChange={e => setSecurityData({ ...securityData, newPassword: e.target.value })} 
-                      />
+                      <div className="space-y-1">
+                        <Input 
+                          label="New Account Password" 
+                          type="password" 
+                          value={securityData.newPassword} 
+                          onChange={e => setSecurityData({ ...securityData, newPassword: e.target.value })} 
+                        />
+                        <FormError message={errors.newPassword} />
+                      </div>
                       {securityData.newPassword && (
                         <div className="px-2">
                           <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -556,12 +604,15 @@ export default function ProfilePage() {
                         </div>
                       )}
                     </div>
-                    <Input 
-                      label="Confirm Identity Sync" 
-                      type="password" 
-                      value={securityData.confirmPassword} 
-                      onChange={e => setSecurityData({ ...securityData, confirmPassword: e.target.value })} 
-                    />
+                    <div className="space-y-1">
+                      <Input 
+                        label="Confirm Identity Sync" 
+                        type="password" 
+                        value={securityData.confirmPassword} 
+                        onChange={e => setSecurityData({ ...securityData, confirmPassword: e.target.value })} 
+                      />
+                      <FormError message={errors.confirmPassword} />
+                    </div>
                     <div className="md:col-span-2 pt-6">
                       <Button type="submit" loading={saving} className="bg-brand-coral hover:bg-red-600 shadow-brand-coral/20">Update Authentication</Button>
                     </div>
@@ -579,30 +630,39 @@ export default function ProfilePage() {
                   </div>
 
                   <form onSubmit={handleUpdatePIN} className="grid grid-cols-1 md:grid-cols-3 gap-8 bg-brand-blue/[0.02] p-8 rounded-[40px] border border-brand-blue/10 shadow-sm">
-                    <Input 
-                      label="Current PIN" 
-                      type="password" 
-                      maxLength={4} 
-                      placeholder="••••" 
-                      value={securityData.currentPIN} 
-                      onChange={e => setSecurityData({ ...securityData, currentPIN: e.target.value })} 
-                    />
-                    <Input 
-                      label="New Access PIN" 
-                      type="password" 
-                      maxLength={4} 
-                      placeholder="••••" 
-                      value={securityData.newPIN} 
-                      onChange={e => setSecurityData({ ...securityData, newPIN: e.target.value })} 
-                    />
-                    <Input 
-                      label="Redistribute PIN" 
-                      type="password" 
-                      maxLength={4} 
-                      placeholder="••••" 
-                      value={securityData.confirmPIN} 
-                      onChange={e => setSecurityData({ ...securityData, confirmPIN: e.target.value })} 
-                    />
+                    <div className="space-y-1">
+                      <Input 
+                        label="Current PIN" 
+                        type="password" 
+                        maxLength={4} 
+                        placeholder="••••" 
+                        value={securityData.currentPIN} 
+                        onChange={e => setSecurityData({ ...securityData, currentPIN: e.target.value })} 
+                      />
+                      <FormError message={errors.currentPIN} />
+                    </div>
+                    <div className="space-y-1">
+                      <Input 
+                        label="New Access PIN" 
+                        type="password" 
+                        maxLength={4} 
+                        placeholder="••••" 
+                        value={securityData.newPIN} 
+                        onChange={e => setSecurityData({ ...securityData, newPIN: e.target.value })} 
+                      />
+                      <FormError message={errors.newPIN} />
+                    </div>
+                    <div className="space-y-1">
+                      <Input 
+                        label="Redistribute PIN" 
+                        type="password" 
+                        maxLength={4} 
+                        placeholder="••••" 
+                        value={securityData.confirmPIN} 
+                        onChange={e => setSecurityData({ ...securityData, confirmPIN: e.target.value })} 
+                      />
+                      <FormError message={errors.confirmPIN} />
+                    </div>
                     <div className="md:col-span-3 pt-6">
                       <Button type="submit" loading={saving} variant="info" className="bg-brand-blue hover:bg-blue-600 shadow-brand-blue/20">Sync Hardware PIN</Button>
                     </div>
