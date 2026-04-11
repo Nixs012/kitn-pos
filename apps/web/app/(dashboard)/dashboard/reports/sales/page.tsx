@@ -33,6 +33,7 @@ import Table from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { SkeletonCard, SkeletonTableRow } from '@/components/ui/Skeleton';
 
 type DateRange = 'today' | 'week' | 'month' | 'custom';
 
@@ -296,10 +297,16 @@ export default function SalesReportsPage() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <SummaryCard title="Total Sales" value={`${metrics.totalRevenue.toLocaleString()} KES`} icon={DollarSign} colorClass="bg-green-600" subText="Net Revenue Collected" />
-        <SummaryCard title="Transactions" value={metrics.transactionCount} icon={Hash} colorClass="bg-blue-600" subText="Total Sales Completed" />
-        <SummaryCard title="Avg Sale Value" value={`${Math.round(metrics.averageSale).toLocaleString()} KES`} icon={TrendingUp} colorClass="bg-purple-600" subText="Revenue per Customer" />
-        <SummaryCard title="Items Sold" value={metrics.totalItems} icon={Box} colorClass="bg-orange-500" subText="Total Volume Sold" />
+        {loading ? (
+          [1, 2, 3, 4].map(i => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <SummaryCard title="Total Sales" value={`${metrics.totalRevenue.toLocaleString()} KES`} icon={DollarSign} colorClass="bg-green-600" subText="Net Revenue Collected" />
+            <SummaryCard title="Transactions" value={metrics.transactionCount} icon={Hash} colorClass="bg-blue-600" subText="Total Sales Completed" />
+            <SummaryCard title="Avg Sale Value" value={`${Math.round(metrics.averageSale).toLocaleString()} KES`} icon={TrendingUp} colorClass="bg-purple-600" subText="Revenue per Customer" />
+            <SummaryCard title="Items Sold" value={metrics.totalItems} icon={Box} colorClass="bg-orange-500" subText="Total Volume Sold" />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -331,7 +338,11 @@ export default function SalesReportsPage() {
               </div>
             </div>
             <Table headers={['Receipt #', 'Date & Time', 'Cashier', 'Payment', 'Amount', 'Actions']} loading={loading}>
-              {pagedSales.length > 0 ? pagedSales.map(sale => (
+              {loading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <SkeletonTableRow key={i} />
+                ))
+              ) : pagedSales.length > 0 ? pagedSales.map(sale => (
                 <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-5 font-black text-brand-dark">{sale.receipt_number}</td>
                   <td className="px-6 py-5">

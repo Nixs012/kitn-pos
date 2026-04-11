@@ -22,6 +22,7 @@ import Table from '@/components/ui/Table';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { SkeletonCard, SkeletonTableRow } from '@/components/ui/Skeleton';
 
 interface InventoryItem {
   id: string; // product id
@@ -262,41 +263,47 @@ export default function InventoryPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-brand-green/10 rounded-2xl group-hover:scale-110 transition-transform">
-              <Package className="text-brand-green" size={24} />
+        {loading ? (
+          [1, 2, 3].map(i => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-brand-green/10 rounded-2xl group-hover:scale-110 transition-transform">
+                  <Package className="text-brand-green" size={24} />
+                </div>
+              </div>
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Total Products</p>
+              <h3 className="text-3xl font-black text-brand-dark mt-1">{totalProducts}</h3>
             </div>
-          </div>
-          <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Total Products</p>
-          <h3 className="text-3xl font-black text-brand-dark mt-1">{totalProducts}</h3>
-        </div>
 
-        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-orange-100 rounded-2xl group-hover:scale-110 transition-transform">
-              <AlertTriangle className="text-orange-500" size={24} />
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-orange-100 rounded-2xl group-hover:scale-110 transition-transform">
+                  <AlertTriangle className="text-orange-500" size={24} />
+                </div>
+                <div className="bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
+                  <span className="text-[10px] font-black text-orange-600 uppercase">Urgent</span>
+                </div>
+              </div>
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Low Stock Items</p>
+              <h3 className="text-3xl font-black text-orange-500 mt-1">{lowStockCount}</h3>
             </div>
-            <div className="bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">
-              <span className="text-[10px] font-black text-orange-600 uppercase">Urgent</span>
-            </div>
-          </div>
-          <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Low Stock Items</p>
-          <h3 className="text-3xl font-black text-orange-500 mt-1">{lowStockCount}</h3>
-        </div>
 
-        <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-red-100 rounded-2xl group-hover:scale-110 transition-transform">
-              <MinusCircle className="text-red-500" size={24} />
+            <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-red-100 rounded-2xl group-hover:scale-110 transition-transform">
+                  <MinusCircle className="text-red-500" size={24} />
+                </div>
+                <div className="bg-red-50 px-2.5 py-1 rounded-full border border-red-100">
+                  <span className="text-[10px] font-black text-red-600 uppercase">Alert</span>
+                </div>
+              </div>
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Out of Stock</p>
+              <h3 className="text-3xl font-black text-red-500 mt-1">{outOfStockCount}</h3>
             </div>
-            <div className="bg-red-50 px-2.5 py-1 rounded-full border border-red-100">
-              <span className="text-[10px] font-black text-red-600 uppercase">Alert</span>
-            </div>
-          </div>
-          <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Out of Stock</p>
-          <h3 className="text-3xl font-black text-red-500 mt-1">{outOfStockCount}</h3>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Main Table Section */}
@@ -321,9 +328,11 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <Table headers={['Product Name', 'SKU', 'Category', 'Current Stock', 'Unit', 'Reorder Level', 'Status', 'Last Restocked', 'Actions']}>
+        <Table headers={['Product Name', 'SKU', 'Category', 'Current Stock', 'Unit', 'Reorder Level', 'Status', 'Last Restocked', 'Actions']} loading={loading}>
           {loading ? (
-            <tr><td colSpan={9} className="py-20 text-center text-gray-400 font-medium">Fetching inventory...</td></tr>
+            Array.from({ length: 12 }).map((_, i) => (
+              <SkeletonTableRow key={i} />
+            ))
           ) : filteredInventory.length === 0 ? (
             <tr><td colSpan={9} className="py-20 text-center text-gray-400 font-medium">No results found for &ldquo;{searchTerm}&rdquo;</td></tr>
           ) : filteredInventory.map(item => {

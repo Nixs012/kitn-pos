@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { safeQuery } from '@/lib/supabase/handleError';
+import { SkeletonCard, SkeletonTableRow } from '@/components/ui/Skeleton';
 import { 
   Plus, 
   Search, 
@@ -11,6 +12,8 @@ import {
   Download,
   Package,
   AlertCircle,
+  AlertTriangle,
+  Layers,
   Camera,
   Upload,
   X,
@@ -21,6 +24,7 @@ import * as toast from '@/lib/toast';
 import Image from 'next/image';
 import BarcodeScanner from '@/components/pos/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import Papa from 'papaparse';
 
 
 // Components
@@ -29,7 +33,6 @@ import Input from '@/components/ui/Input';
 import Table from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
-import Papa from 'papaparse';
 
 // Types from schema
 interface Product {
@@ -463,76 +466,139 @@ export default function ProductsPage() {
           </div>
         </div>
 
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {loading ? (
+            [1, 2, 3, 4].map(i => <SkeletonCard key={i} />)
+          ) : (
+            <>
+              <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-brand-green/10 rounded-2xl group-hover:scale-110 transition-transform">
+                    <Package className="text-brand-green" size={24} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Total Products</p>
+                <h3 className="text-3xl font-black text-brand-dark mt-1">{products.length}</h3>
+              </div>
+
+              <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-blue-50 rounded-2xl group-hover:scale-110 transition-transform">
+                    <Layers className="text-blue-500" size={24} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Categories</p>
+                <h3 className="text-3xl font-black text-brand-dark mt-1">{CATEGORIES.length - 1}</h3>
+              </div>
+
+              <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-orange-100 rounded-2xl group-hover:scale-110 transition-transform">
+                    <AlertTriangle className="text-orange-500" size={24} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Low Stock</p>
+                <h3 className="text-3xl font-black text-orange-500 mt-1">
+                  {products.filter(p => {
+                    const stock = p.inventory?.[0]?.quantity || 0;
+                    const reorder = p.inventory?.[0]?.reorder_level || 10;
+                    return stock > 0 && stock < reorder;
+                  }).length}
+                </h3>
+              </div>
+
+              <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-red-100 rounded-2xl group-hover:scale-110 transition-transform">
+                    <AlertCircle className="text-red-500" size={24} />
+                  </div>
+                </div>
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Out of Stock</p>
+                <h3 className="text-3xl font-black text-red-500 mt-1">
+                  {products.filter(p => (p.inventory?.[0]?.quantity || 0) === 0).length}
+                </h3>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Products Table */}
         <Table headers={['#', 'Product Name', 'Barcode', 'Category', 'Buy Price', 'Sell Price', 'VAT', 'Unit', 'Stock', 'Status', 'Actions']} loading={loading}>
-          {filteredProducts.length > 0 ? filteredProducts.map((p, i) => {
-            const stock = p.inventory?.[0]?.quantity || 0;
-            const reorder = p.inventory?.[0]?.reorder_level || 10;
-            
-            let stockVariant: 'success' | 'danger' | 'warning' | 'info' | 'gray' | 'purple' | 'brand' = 'success';
-            let stockLabel = 'In Stock';
-            if (stock === 0) {
-              stockVariant = 'danger';
-              stockLabel = 'Out of Stock';
-            } else if (stock < reorder) {
-              stockVariant = 'warning';
-              stockLabel = 'Low Stock';
-            }
+          {loading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonTableRow key={i} />
+            ))
+          ) : filteredProducts.length > 0 ? (
+            filteredProducts.map((p, i) => {
+              const stock = p.inventory?.[0]?.quantity || 0;
+              const reorder = p.inventory?.[0]?.reorder_level || 10;
+              
+              let stockVariant: 'success' | 'danger' | 'warning' | 'info' | 'gray' | 'purple' | 'brand' = 'success';
+              let stockLabel = 'In Stock';
+              if (stock === 0) {
+                stockVariant = 'danger';
+                stockLabel = 'Out of Stock';
+              } else if (stock < reorder) {
+                stockVariant = 'warning';
+                stockLabel = 'Low Stock';
+              }
 
-            return (
-              <tr key={p.id} className="group hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 text-[10px] font-bold text-gray-400">{i + 1}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform overflow-hidden relative">
-                      {p.image_url ? (
-                        <Image src={p.image_url} alt={p.name} fill className="object-cover" />
-                      ) : (
-                        <Package size={16} />
-                      )}
+              return (
+                <tr key={p.id} className="group hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 text-[10px] font-bold text-gray-400">{i + 1}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform overflow-hidden relative">
+                        {p.image_url ? (
+                          <Image src={p.image_url} alt={p.name} fill className="object-cover" />
+                        ) : (
+                          <Package size={16} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-brand-dark">{p.name}</p>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{p.sku || 'NO SKU'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-brand-dark">{p.name}</p>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{p.sku || 'NO SKU'}</p>
+                  </td>
+                  <td className="px-6 py-4 text-[10px] font-bold text-gray-700">{p.barcode || '-'}</td>
+                  <td className="px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{p.category}</td>
+                  <td className="px-6 py-4 text-[11px] font-black text-gray-600">KES {p.buying_price?.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-[11px] font-black text-brand-green">KES {p.selling_price?.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-[10px] font-bold text-gray-500">{p.vat_rate}%</td>
+                  <td className="px-6 py-4 text-[10px] font-bold text-gray-500 uppercase">{p.unit}</td>
+                  <td className="px-6 py-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-brand-dark">{stock} <span className="text-[9px] text-gray-400">{p.unit}</span></p>
+                      <Badge variant={stockVariant}>{stockLabel}</Badge>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-[10px] font-bold text-gray-700">{p.barcode || '-'}</td>
-                <td className="px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{p.category}</td>
-                <td className="px-6 py-4 text-[11px] font-black text-gray-600">KES {p.buying_price?.toLocaleString()}</td>
-                <td className="px-6 py-4 text-[11px] font-black text-brand-green">KES {p.selling_price?.toLocaleString()}</td>
-                <td className="px-6 py-4 text-[10px] font-bold text-gray-500">{p.vat_rate}%</td>
-                <td className="px-6 py-4 text-[10px] font-bold text-gray-500 uppercase">{p.unit}</td>
-                <td className="px-6 py-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-black text-brand-dark">{stock} <span className="text-[9px] text-gray-400">{p.unit}</span></p>
-                    <Badge variant={stockVariant}>{stockLabel}</Badge>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <Badge variant={p.is_active ? 'success' : 'gray'}>
-                    {p.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => openEditModal(p)}
-                      className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm group-hover:shadow-md"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button 
-                      onClick={() => { setCurrentProduct(p); setIsDeleteModalOpen(true); }}
-                      className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm group-hover:shadow-md"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          }) : (
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge variant={p.is_active ? 'success' : 'gray'}>
+                      {p.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => openEditModal(p)}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm group-hover:shadow-md"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => { setCurrentProduct(p); setIsDeleteModalOpen(true); }}
+                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm group-hover:shadow-md"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
             <tr>
               <td colSpan={11} className="py-20 text-center font-medium text-gray-400 italic">
                 No products found matching your search.
