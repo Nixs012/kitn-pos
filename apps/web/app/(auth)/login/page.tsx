@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import KitnLogo from '@/components/ui/KitnLogo'
 import * as toast from '@/lib/toast'
 import { Mail, Lock, ChevronRight, UserCircle2 } from 'lucide-react'
+import Link from 'next/link'
 
 type Role = 'admin' | 'manager' | 'cashier' | 'viewer'
 
@@ -172,7 +173,7 @@ export default function LoginPage() {
                   <input type="checkbox" className="mr-1.5 rounded border-white/10 bg-white/5 text-brand-green focus:ring-brand-green" />
                   Remember me
                 </label>
-                <a href="#" className="text-brand-blue font-bold hover:text-brand-blue/80 transition-colors">FORGOT PASSWORD?</a>
+                <Link href="/forgot-password" className="text-brand-blue font-bold hover:text-brand-blue/80 transition-colors uppercase">FORGOT PASSWORD?</Link>
               </div>
 
               <button
@@ -228,6 +229,11 @@ export default function LoginPage() {
                 <div className="h-12 flex items-center justify-center opacity-30">
                   <UserCircle2 className="w-5 h-5 text-gray-400" />
                 </div>
+              </div>
+              <div className="text-center pt-2">
+                <Link href="/forgot-password" className="text-[10px] font-black tracking-widest text-gray-500 hover:text-brand-blue transition-colors uppercase">
+                  Forgot PIN? Reset via Account Password
+                </Link>
               </div>
             </div>
           )}

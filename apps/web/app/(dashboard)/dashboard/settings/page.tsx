@@ -8,9 +8,6 @@ import {
   Store, 
   Users, 
   Smartphone, 
-  Plus, 
-  Save, 
-  Shield, 
   Power,
   MapPin,
   Layout,
@@ -18,12 +15,18 @@ import {
   ExternalLink,
   ShieldAlert,
   Download,
-  RefreshCw,
-  Trash2,
   CreditCard,
+  Plus,
+  Trash2,
+  AlertCircle,
+  UserCircle2,
+  Lock,
+  Unlock,
+  RefreshCw,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  Shield,
+  Save
 } from 'lucide-react';
 import * as toast from '@/lib/toast';
 
@@ -625,13 +628,14 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
   onUpdate: () => void 
 }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   
   const [selectedUser, setSelectedUser] = useState<IUserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   const [addFormData, setAddFormData] = useState({
     full_name: '',
@@ -911,17 +915,17 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => openEditModal(u)}
-                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                    title="Edit User"
+                    className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"
+                    title="Edit User Info"
                   >
-                    <Plus size={14} />
+                    <UserCircle2 size={16} />
                   </button>
                   <button 
                     onClick={() => { setSelectedUser(u); setIsPinModalOpen(true); }}
-                    className="p-2 text-gray-400 hover:text-brand-dark hover:bg-gray-100 rounded-lg transition-all"
-                    title="Reset PIN"
+                    className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
+                    title="Reset Terminal PIN"
                   >
-                    <Smartphone size={14} />
+                    <Smartphone size={16} />
                   </button>
                   <button 
                     disabled={u.id === profile.id}
@@ -1024,8 +1028,29 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
               <FormError message={errors.pin} />
             </div>
             <div className="relative space-y-1">
-                <Input label="Temporary Password*" type="text" required value={addFormData.password} onChange={e => setAddFormData({...addFormData, password: e.target.value})} />
-                <button type="button" onClick={generatePassword} className="absolute right-3 bottom-3 text-[9px] font-black text-brand-green uppercase hover:underline">Auto-Gen</button>
+                <Input 
+                  label="Account Password*" 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  value={addFormData.password} 
+                  onChange={e => setAddFormData({...addFormData, password: e.target.value})} 
+                />
+                <div className="absolute right-3 bottom-0 flex items-center gap-2 pb-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    {showPassword ? <Lock size={14} /> : <Unlock size={14} />}
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={generatePassword} 
+                    className="text-[9px] font-black text-brand-green uppercase hover:underline"
+                  >
+                    Auto-Gen
+                  </button>
+                </div>
                 <FormError message={errors.password} />
             </div>
           </div>

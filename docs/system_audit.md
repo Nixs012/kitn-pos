@@ -1,68 +1,21 @@
-# KiTN POS — System Audit & Progress Report (v1.2.0)
+# KiTN POS - System Feature Audit
 
-This document tracks the functional status of all platform modules, identifying stable areas and those requiring further development.
+This document outlines the current status of features within the KiTN POS application.
 
----
+| Feature Area | Module / Path | Status | Details |
+| :--- | :--- | :--- | :--- |
+| **Authentication** | `(auth)/login` | ✅ DONE | Email & Password login, PIN terminal login. |
+| **User Recovery** | `(auth)/forgot-password` | ❌ NOT DONE | Password recovery page is missing. |
+| **Tenant Onboarding** | `admin/tenants` | ⚠️ PARTIAL | API exists, but Admin UI is currently a Placeholder. |
+| **Product Management** | `dashboard/products` | ✅ DONE | Image uploads, categories, barcode generation, bulk import. |
+| **Inventory Tracking** | `dashboard/inventory` | ✅ DONE | Stock movements, branch transfers, automated reorder triggers. |
+| **POS Terminal** | `dashboard/pos` | ✅ DONE | Cart management, multi-device support, receipt printing. |
+| **M-Pesa Integration** | `api/mpesa` | ✅ DONE | STK Push, callback handling, and status polling. |
+| **Financial Analytics** | `dashboard/finance` | ✅ DONE | Profit/Loss, branch benchmarks, expense tracking. |
+| **Sales Reporting** | `reports/sales` | ✅ DONE | Receipt history, daily close summaries, CSV exports. |
+| **Team Management** | `dashboard/team` | ⚠️ PARTIAL | User adding works, but "forgot PIN" recovery is missing. |
+| **Notification System** | `stores/notificationStore` | ✅ DONE | Real-time system alerts and persistent history. |
+| **Offline Recovery** | `hooks/useNetworkStatus` | ⚠️ PARTIAL | Connection detection is live; background syncing needs Stress Testing. |
 
-## ✅ Completed (Production Ready)
-These modules are fully integrated with the backend and feature a polished UI.
-
-### 1. POS Terminal Engine
-- **Features**: Physical/Camera Barcode scanning, STK Push (Interface), Dynamic Cart, Receipt generation.
-- **Backend**: `sales`, `sales_items` tables fully utilized.
-
-### 2. Core Dashboard & Navigation
-- **Features**: KPI metrics (Real-time), Deep-link Breadcrumbs, Mobile-responsive bottom navigation.
-- **UX**: All "View All" and "History" links are functional.
-
-### 3. Inventory & Product Management
-- **Features**: SKU tracking, Low-stock alerts, Category filtering, Bulk CSV import.
-- **Backend**: `products` table with heads/exact count triggers.
-
-### 4. Sales Reporting 
-- **Features**: Interactive Recharts graphs, Date range filtering, Receipt auditing, CSV exports.
-
-### 5. Multi-Branch (Outlets)
-- **Features**: Branch creation, Stock transfers between outlets, Branch-specific stock views.
-- **Backend**: `branches` and `inventory_movements` tables.
-
-### 6. Team & Shift Management
-- **Features**: Digital shift clock (Clock-in/out), Sales-by-staff leaderboards, Activity logs.
-- **Backend**: `shifts` table integrated with user profiles.
-
-### 7. Superadmin Panel 
-- **Features**: Global business overview, Total revenue tracking, Access restricted to `@kitnpos.co.ke` domain.
-
----
-
-## 🚧 Partial (Integrated but Needs Polish/Testing)
-These features exist in the code but require production environment verification.
-
-### 1. MPesa Integration
-- **Status**: Backend logic for callbacks exists in `/api/mpesa`, but needs Live environmental testing for STK Push reliability.
-
-### 2. Global Search & Notifications
-- **Status**: Notifications table (`014`) is live. UI toast for low stock is integrated. Global search needs better fuzzy-matching.
-
-### 3. Finance & Profit tracking
-- **Status**: Basic P&L is live. Subscription gating (`UpgradePrompt`) is enforced. Needs more expense categories.
-
-### 4. Settings & Permissions
-- **Status**: Role-based access control (RBAC) works in UI. Backend policies for `Cashier` role need stricter coverage.
-
----
-
-## 📅 Not Complete (Future Roadmap)
-Features planned for future versioning.
-
-- **Offline Sync (v2.0)**: Advanced conflict resolution for multi-day offline outages.
-- **Tax Compliance (TIMS)**: Full integration with KRA iTax/TIMS devices for fiscalized receipts.
-- **Customer Loyalty**: Member points system and discount automation.
-- **Payroll Automation**: Automated payslip generation from shift logs.
-
----
-
-## 🛠️ Technical Health
-- **Stack**: Next.js 14, Tailwind CSS, Supabase, Lucide React, Recharts.
-- **Real-time**: Enabled on Dashboard and POS for instant updates.
-- **Type Safety**: Strictly enforced. No `any` types remaining in core logic.
+## Audit Summary
+The core "Engine" of the KiTN POS is **100% functional**. A business can successfully manage stock and make sales. The remaining gaps are localized to **User Identity Self-Service** (Forgot Password/PIN) and minor UI/UX consistency issues in the Admin settings.
