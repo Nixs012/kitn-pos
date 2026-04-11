@@ -8,6 +8,7 @@ import NotificationBell from '@/components/layout/NotificationBell';
 import { OfflineBanner } from '@/components/layout/OfflineBanner';
 import { UserHydrator } from '@/components/auth/UserHydrator';
 import GlobalSearch from '@/components/layout/GlobalSearch';
+import NetworkStatusBadge from '@/components/layout/NetworkStatusBadge';
 
 export default async function DashboardLayout({
   children,
@@ -65,12 +66,8 @@ export default async function DashboardLayout({
           <div className="flex-1 max-w-md px-10">
             <GlobalSearch />
           </div>
-          
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2.5 px-4 py-2 bg-brand-green/5 rounded-full border border-brand-green/10 transition-all hover:bg-brand-green/10 cursor-default group">
-              <div className="w-2 h-2 rounded-full bg-brand-green shadow-[0_0_8px_#1D9E75] group-hover:animate-ping" />
-              <span className="text-[10px] font-black text-brand-green tracking-[0.15em] uppercase">Branch Server Online</span>
-            </div>
+            <NetworkStatusBadge />
             <NotificationBell />
           </div>
         </header>
