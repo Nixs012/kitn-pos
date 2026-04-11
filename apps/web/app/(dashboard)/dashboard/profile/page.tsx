@@ -380,9 +380,12 @@ export default function ProfilePage() {
                     fill 
                     className="object-cover" 
                     unoptimized
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/placeholder-product.png';
+                    }}
                   />
                 ) : (
-                  <span className="text-4xl font-black">{profile?.full_name?.split(' ').map(n => n[0]).join('') || 'U'}</span>
+                  <span className="text-4xl font-black">{(profile?.full_name || 'U').split(' ').map(n => n[0]).join('')}</span>
                 )}
               </div>
               <label 

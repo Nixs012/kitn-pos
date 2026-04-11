@@ -58,13 +58,13 @@ interface Sale {
   total_amount: number;
   tax_amount: number;
   discount: number;
-  user_profiles: { full_name: string };
+  user_profiles: { full_name: string } | null;
   sale_items: Array<{
     id: string;
     products: { name: string; unit?: string } | null;
     quantity: number;
     unit_price: number;
-  }>;
+  }> | null;
 }
 
 const SummaryCard = ({ title, value, icon: Icon, colorClass, subText }: { title: string, value: string | number, icon: React.ElementType, colorClass: string, subText: string }) => (
@@ -196,9 +196,9 @@ export default function SalesReportsPage() {
       });
 
       setPaymentMetrics([
-        { method: 'M-Pesa', amount: payMap.mpesa, percentage: totalRev ? Math.round((payMap.mpesa / totalRev) * 100) : 0 },
-        { method: 'Cash', amount: payMap.cash, percentage: totalRev ? Math.round((payMap.cash / totalRev) * 100) : 0 },
-        { method: 'Card', amount: payMap.card, percentage: totalRev ? Math.round((payMap.card / totalRev) * 100) : 0 },
+        { method: 'M-Pesa', amount: (payMap ?? {}).mpesa || 0, percentage: totalRev ? Math.round(((payMap?.mpesa || 0) / totalRev) * 100) : 0 },
+        { method: 'Cash', amount: (payMap ?? {}).cash || 0, percentage: totalRev ? Math.round(((payMap?.cash || 0) / totalRev) * 100) : 0 },
+        { method: 'Card', amount: (payMap ?? {}).card || 0, percentage: totalRev ? Math.round(((payMap?.card || 0) / totalRev) * 100) : 0 },
       ]);
 
       setChartData(Object.entries(dayMap).map(([day, revenue]) => ({ day, revenue })));
@@ -207,7 +207,11 @@ export default function SalesReportsPage() {
         Object.values(prodMap)
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 10)
-          .map((p, i) => ({ ...p, rank: i + 1, percentage: totalRev ? ((p.revenue / totalRev) * 100).toFixed(1) : 0 }))
+          .map((p, i) => ({ 
+            ...p, 
+            rank: i + 1, 
+            percentage: totalRev ? (((p.revenue || 0) / totalRev) * 100).toFixed(1) : '0' 
+          }))
       );
 
     } finally {
@@ -441,7 +445,9 @@ export default function SalesReportsPage() {
                       <p className="font-bold text-brand-dark text-sm">{item.products?.name}</p>
                       <p className="text-[10px] text-gray-400 font-medium">{item.quantity} {item.products?.unit || 'pcs'} × {item.unit_price.toLocaleString()} KES</p>
                     </div>
-                    <span className="font-black text-brand-dark">{(item.quantity * item.unit_price).toLocaleString()}</span>
+                    <span className="font-black text-brand-dark">
+                      {((Number(item.quantity) || 0) * (Number(item.unit_price) || 0)).toLocaleString()}
+                    </span>
                   </div>
                 ))}
               </div>

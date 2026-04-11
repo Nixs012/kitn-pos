@@ -272,13 +272,13 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
       
       const csvContent = [
         ['Date', 'Branch', 'Cashier', 'Receipt', 'Amount', 'Payment Method'].join(','),
-        ...(sales || []).map(s => [
-          new Date(s.created_at).toLocaleDateString(),
+        ...(sales ?? []).map(s => [
+          s.created_at ? new Date(s.created_at).toLocaleDateString() : 'N/A',
           (s as { branches?: { name: string } }).branches?.name || 'Main',
-          s.user_profiles?.full_name,
-          s.receipt_number,
-          s.total_amount,
-          s.payment_method
+          s.user_profiles?.full_name || 'N/A',
+          s.receipt_number || 'N/A',
+          s.total_amount || 0,
+          s.payment_method || 'N/A'
         ].join(','))
       ].join('\n');
 
@@ -481,7 +481,16 @@ const StoreSettingsTab = ({ tenant, profile, branches, onUpdate, setActiveTab }:
           </h3>
           <div className="p-6 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center gap-4 hover:border-brand-green/30 transition-all group">
             {formData.logo_url ? (
-              <Image src={formData.logo_url} width={80} height={80} className="object-contain" alt="Logo" />
+              <Image 
+                src={formData.logo_url} 
+                width={80} 
+                height={80} 
+                className="object-contain" 
+                alt="Logo" 
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/placeholder-product.png';
+                }}
+              />
             ) : (
               <div className="w-20 h-20 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300 group-hover:text-brand-green transition-all">
                 <Plus size={32} />
@@ -876,7 +885,7 @@ const UsersTab = ({ users, branches, profile, onUpdate }: {
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-black text-xs border border-brand-green/20">
-                    {u.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                    {(u.full_name || 'User').split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                   </div>
                   <div>
                     <p className="text-sm font-black text-brand-dark">{u.full_name}</p>
@@ -1333,7 +1342,7 @@ const SubscriptionTab = ({ subscription, tenant, onUpdate }: {
               <p className="text-sm text-gray-500 font-bold mt-1">
                 {subscription?.status === 'trial' 
                   ? `Your trial period ends in ${daysRemaining} days.`
-                  : `Next billing cycle on ${new Date(subscription?.current_period_end || '').toLocaleDateString()}.`}
+                  : `Next billing cycle on ${subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'N/A'}.`}
               </p>
             </div>
           </div>

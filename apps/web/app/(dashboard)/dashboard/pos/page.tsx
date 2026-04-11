@@ -112,7 +112,17 @@ const ProductCard = ({ product, onAdd }: { product: Product, onAdd: (p: Product)
       <div className="flex justify-between items-start mb-4">
         <div className="w-full aspect-square rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 group-hover:scale-105 transition-transform duration-500 overflow-hidden border border-gray-50 relative">
           {product.image_url ? (
-            <Image src={product.image_url} alt={product.name} fill className="object-cover" unoptimized />
+            <Image 
+              src={product.image_url} 
+              alt={product.name} 
+              fill 
+              className="object-cover" 
+              unoptimized 
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = '/placeholder-product.png';
+              }}
+            />
           ) : (
             <Package size={32} />
           )}
@@ -255,7 +265,7 @@ export default function PosPage() {
     }
   };
 
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = ['All', ...Array.from(new Set((products ?? []).map(p => p.category)))];
 
   const handleCharge = async (method: 'cash' | 'mpesa' | 'card') => {
     if (items.length === 0) return;
@@ -329,13 +339,17 @@ export default function PosPage() {
 
       // 2. Insert Sale Items
       for (const item of items) {
+        const unitPrice = Number(item.price) || 0;
+        const qty = Number(item.quantity) || 0;
+        const vatRate = Number(item.vat_rate) || 0;
+        
         await safeQuery(
           () => supabase.from('sale_items').insert({
             sale_id: sale.id,
             product_id: item.id,
-            quantity: item.quantity,
-            unit_price: item.price,
-            vat_amount: (item.price * item.quantity) - (item.price * item.quantity / (1 + item.vat_rate / 100))
+            quantity: qty,
+            unit_price: unitPrice,
+            vat_amount: (unitPrice * qty) - (unitPrice * qty / (1 + vatRate / 100))
           }),
           'record sale item'
         );
@@ -697,13 +711,20 @@ export default function PosPage() {
             ))}
           </div>
 
-          {/* Product Grid */}
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} onAdd={addItem} />
-              ))}
-            </div>
+            {filteredProducts.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-10 bg-white rounded-[32px] border border-dashed border-gray-200">
+                <Package size={48} className="text-gray-200 mb-4" />
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No products found</p>
+                <p className="text-xs text-gray-300 mt-1">Try a different search or category</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
+                {filteredProducts.map(product => (
+                  <ProductCard key={product.id} product={product} onAdd={addItem} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -940,13 +961,17 @@ export default function PosPage() {
             <div className="space-y-3">
               <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Sold Items</h4>
               <div className="space-y-2">
-                {lastSale?.items?.map((item: SaleItem) => (
+                {(lastSale?.items ?? []).map((item: SaleItem) => (
                   <div key={item.id} className="flex justify-between items-center p-4 bg-white border border-gray-50 rounded-2xl shadow-sm">
                     <div>
                       <p className="font-bold text-brand-dark text-sm">{item.name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">{item.quantity} {item.unit || 'pcs'} × {item.price.toLocaleString()}</p>
+                      <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">
+                        {(Number(item.quantity) || 0)} {item.unit || 'pcs'} × {(Number(item.price) || 0).toLocaleString()}
+                      </p>
                     </div>
-                    <span className="font-black text-brand-dark tracking-tight">{(item.quantity * item.price).toLocaleString()}</span>
+                    <span className="font-black text-brand-dark tracking-tight">
+                      {((Number(item.quantity) || 0) * (Number(item.price) || 0)).toLocaleString()}
+                    </span>
                   </div>
                 ))}
               </div>

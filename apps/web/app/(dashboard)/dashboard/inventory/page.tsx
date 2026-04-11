@@ -146,9 +146,11 @@ export default function InventoryPage() {
     }
 
     try {
-      const addedQty = Number(restockData.quantity);
-      const currentInv = selectedProduct.inventory[0];
-      const newQty = currentInv.quantity + addedQty;
+      const addedQty = Number(restockData.quantity) || 0;
+      const currentInv = selectedProduct.inventory?.[0];
+      if (!currentInv) throw new Error('Inventory record not found');
+      
+      const newQty = (Number(currentInv.quantity) || 0) + addedQty;
 
       // 1. Update Inventory
       const success = await safeQuery(
@@ -215,9 +217,11 @@ export default function InventoryPage() {
     }
 
     try {
-      const newQty = Number(adjustmentData.newQuantity);
-      const currentInv = product.inventory[0];
-      const diff = newQty - currentInv.quantity;
+      const newQty = Number(adjustmentData.newQuantity) || 0;
+      const currentInv = product.inventory?.[0];
+      if (!currentInv) throw new Error('Inventory record not found');
+      
+      const diff = newQty - (Number(currentInv.quantity) || 0);
 
       // 1. Update Inventory
       const success = await safeQuery(
@@ -258,8 +262,11 @@ export default function InventoryPage() {
   };
 
   // Calculations for Summary Cards
-  const lowStockCount = inventory.filter(i => i.inventory[0].quantity <= i.inventory[0].reorder_level && i.inventory[0].quantity > 0).length;
-  const outOfStockCount = inventory.filter(i => i.inventory[0].quantity === 0).length;
+  const lowStockCount = (inventory ?? []).filter(i => {
+    const inv = i.inventory?.[0];
+    return inv && inv.quantity <= inv.reorder_level && inv.quantity > 0;
+  }).length;
+  const outOfStockCount = (inventory ?? []).filter(i => (i.inventory?.[0]?.quantity || 0) === 0).length;
   const totalProducts = inventory.length;
 
   const filteredInventory = inventory.filter(i => {
@@ -374,9 +381,9 @@ export default function InventoryPage() {
             ))
           ) : filteredInventory.length === 0 ? (
             <tr><td colSpan={9} className="py-20 text-center text-gray-400 font-medium">No results found for &ldquo;{searchTerm}&rdquo;</td></tr>
-          ) : filteredInventory.map(item => {
-            const stock = item.inventory[0].quantity;
-            const reorder = item.inventory[0].reorder_level;
+          ) : (filteredInventory ?? []).map(item => {
+            const stock = Number(item.inventory?.[0]?.quantity) || 0;
+            const reorder = Number(item.inventory?.[0]?.reorder_level) || 0;
             const isLow = stock <= reorder && stock > 0;
             const isOut = stock === 0;
 
@@ -438,7 +445,9 @@ export default function InventoryPage() {
             </div>
             <div className="text-right">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Current Stock</p>
-              <p className="text-xl font-black text-brand-green">{selectedProduct?.inventory[0].quantity} {selectedProduct?.unit}</p>
+              <p className="text-xl font-black text-brand-green">
+                {Number(selectedProduct?.inventory?.[0]?.quantity) || 0} {selectedProduct?.unit || 'pcs'}
+              </p>
             </div>
           </div>
 
@@ -515,7 +524,7 @@ export default function InventoryPage() {
                 onChange={e => setAdjustmentData({...adjustmentData, productId: e.target.value})}
               >
                 <option value="">Choose item to adjust...</option>
-                {inventory.map(i => <option key={i.id} value={i.id}>{i.name} (Current: {i.inventory[0].quantity} {i.unit})</option>)}
+                {(inventory ?? []).map(i => <option key={i.id} value={i.id}>{i.name} (Current: {Number(i.inventory?.[0]?.quantity) || 0} {i.unit || 'pcs'})</option>)}
               </select>
               <FormError message={errors.productId} />
             </div>
@@ -540,7 +549,7 @@ export default function InventoryPage() {
                   value={adjustmentData.reason}
                   onChange={e => setAdjustmentData({...adjustmentData, reason: e.target.value})}
                 >
-                  {REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  {(REASONS ?? []).map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <FormError message={errors.reason} />
               </div>

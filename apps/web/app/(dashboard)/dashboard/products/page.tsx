@@ -417,7 +417,7 @@ export default function ProductsPage() {
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                          p.barcode?.includes(search) || 
+                          (p.barcode ?? '').includes(search) || 
                           p.sku?.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -581,7 +581,16 @@ export default function ProductsPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:scale-110 transition-transform overflow-hidden relative">
                         {p.image_url ? (
-                          <Image src={p.image_url} alt={p.name} fill className="object-cover" />
+                          <Image 
+                            src={p.image_url} 
+                            alt={p.name} 
+                            fill 
+                            className="object-cover" 
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-product.png';
+                            }}
+                          />
                         ) : (
                           <Package size={16} />
                         )}
@@ -705,7 +714,16 @@ export default function ProductsPage() {
                 <div className="relative w-24 h-24 bg-white rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                   {tempImageUrl ? (
                     <>
-                      <Image src={tempImageUrl} alt="Preview" fill className="object-cover" />
+                      <Image 
+                        src={tempImageUrl} 
+                        alt="Preview" 
+                        fill 
+                        className="object-cover" 
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-product.png';
+                        }}
+                      />
                       <button 
                         type="button"
                         onClick={() => { setTempImageUrl(null); setFormData({...formData, image_url: ''}); }}
@@ -805,9 +823,9 @@ export default function ProductsPage() {
                   value={formData.unit}
                   onChange={e => setFormData({...formData, unit: e.target.value})}
                 >
-                  {UNITS.map(u => (
+                  {(UNITS ?? []).map(u => (
                       <option key={u} value={u} className="text-black bg-white">
-                        {u.toUpperCase()}
+                        {(u || '').toUpperCase()}
                       </option>
                     ))}
                 </select>

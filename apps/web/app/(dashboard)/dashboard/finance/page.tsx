@@ -332,7 +332,7 @@ export default function FinancePage() {
           p.revenue += revenue;
           p.cogs += cogs;
           p.profit += profit;
-          p.margin = p.revenue ? (p.profit / p.revenue) * 100 : 0;
+          p.margin = p.revenue ? ((Number(p.profit) || 0) / p.revenue) * 100 : 0;
         });
       });
 
@@ -343,7 +343,7 @@ export default function FinancePage() {
         grossRevenue: grossRev,
         cogs: totalCogs,
         grossProfit: grossProfit,
-        profitMargin: netRev ? (grossProfit / netRev) * 100 : 0,
+        profitMargin: netRev ? ((Number(grossProfit) || 0) / netRev) * 100 : 0,
         vatCollected: totalVat,
         discountsGiven: totalDiscount,
         netRevenue: netRev,
@@ -435,8 +435,8 @@ export default function FinancePage() {
               className="px-4 py-2 bg-transparent text-xs font-black uppercase tracking-widest text-brand-dark focus:outline-none border-none cursor-pointer"
             >
               <option value="all">All Branches</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
+              {(branches ?? []).map(b => (
+                <option key={b.id} value={b.id}>{b.name || 'Unnamed Branch'}</option>
               ))}
             </select>
           </div>
@@ -606,20 +606,20 @@ export default function FinancePage() {
           </div>
         </div>
         <Table headers={['Product Name', 'Units Sold', 'Total Revenue', 'Total COGS', 'Profit', 'Margin %']} loading={loading}>
-          {productProfitData.length > 0 ? productProfitData.map((p) => (
+          {productProfitData.length > 0 ? (productProfitData ?? []).map((p) => (
             <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
               <td className="px-6 py-5">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-brand-dark font-black text-xs">
-                    {p.name[0]}
+                    {(p.name || 'U')[0]}
                   </div>
-                  <span className="font-bold text-brand-dark">{p.name}</span>
+                  <span className="font-bold text-brand-dark">{p.name || 'Unknown Product'}</span>
                 </div>
               </td>
-              <td className="px-6 py-5 font-bold text-gray-500">{p.unitsSold.toLocaleString()}</td>
-              <td className="px-6 py-5 font-black text-brand-dark">{p.revenue.toLocaleString()} KES</td>
-              <td className="px-6 py-5 text-gray-400 font-medium">{p.cogs.toLocaleString()} KES</td>
-              <td className="px-6 py-5 font-black text-brand-green">{p.profit.toLocaleString()} KES</td>
+              <td className="px-6 py-5 font-bold text-gray-500">{(Number(p.unitsSold) || 0).toLocaleString()}</td>
+              <td className="px-6 py-5 font-black text-brand-dark">{(Number(p.revenue) || 0).toLocaleString()} KES</td>
+              <td className="px-6 py-5 text-gray-400 font-medium">{(Number(p.cogs) || 0).toLocaleString()} KES</td>
+              <td className="px-6 py-5 font-black text-brand-green">{(Number(p.profit) || 0).toLocaleString()} KES</td>
               <td className="px-6 py-5">
                 <Badge 
                   variant={p.margin > 20 ? 'success' : p.margin > 10 ? 'warning' : 'danger'}
@@ -638,7 +638,7 @@ export default function FinancePage() {
           {productProfitData.length > 0 && (
             <tr className="bg-gray-50/80 font-black">
               <td className="px-6 py-6 text-brand-dark">TOTALS</td>
-              <td className="px-6 py-6 text-gray-500">{productProfitData.reduce((acc, p) => acc + p.unitsSold, 0).toLocaleString()}</td>
+              <td className="px-6 py-6 text-gray-500">{(productProfitData ?? []).reduce((acc, p) => acc + (Number(p.unitsSold) || 0), 0).toLocaleString()}</td>
               <td className="px-6 py-6 text-brand-dark">{metrics.grossRevenue.toLocaleString()} KES</td>
               <td className="px-6 py-6 text-gray-500">{metrics.cogs.toLocaleString()} KES</td>
               <td className="px-6 py-6 text-brand-green">{metrics.grossProfit.toLocaleString()} KES</td>
@@ -659,19 +659,19 @@ export default function FinancePage() {
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recent Activity</p>
         </div>
         <Table headers={['Date', 'Category', 'Description', 'Amount']} loading={loading}>
-          {expenses.length > 0 ? expenses.map((e) => (
+          {expenses.length > 0 ? (expenses ?? []).map((e) => (
             <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
               <td className="px-6 py-5 text-gray-500 font-medium">
-                {new Date(e.created_at).toLocaleDateString()}
+                {e.created_at ? new Date(e.created_at).toLocaleDateString() : '—'}
               </td>
               <td className="px-6 py-5">
                 <Badge variant="gray" className="font-black px-4 py-1 border-gray-100 text-gray-400 bg-gray-50 uppercase tracking-widest text-[10px]">
-                  {e.category}
+                  {e.category || 'Other'}
                 </Badge>
               </td>
               <td className="px-6 py-5 text-gray-600 font-medium italic">{e.description || '—'}</td>
               <td className="px-6 py-5 font-black text-red-500">
-                - {Number(e.amount).toLocaleString()} KES
+                - {(Number(e.amount) || 0).toLocaleString()} KES
               </td>
             </tr>
           )) : (
