@@ -57,6 +57,39 @@ export default async function SuperAdminOverview() {
     .select('*', { count: 'exact', head: true })
     .gte('created_at', startOfDay.toISOString());
 
+  // Fetch 10 most recent sales across all tenants
+  const { data: recentSales } = await supabase
+    .from('sales')
+    .select(`
+      id,
+      total_amount,
+      created_at,
+      payment_method,
+      branches (
+        name,
+        tenants (
+          name
+        )
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  interface SaleWithTenant {
+    id: string;
+    total_amount: number;
+    created_at: string;
+    payment_method: string;
+    branches: {
+      name: string;
+      tenants: {
+        name: string;
+      }
+    } | null;
+  }
+
+  const sales = (recentSales as unknown as SaleWithTenant[]) || [];
+
   const stats = [
     { 
       label: 'Total Businesses', 
@@ -83,6 +116,8 @@ export default async function SuperAdminOverview() {
       subtext: 'Live transactions',
     }
   ];
+
+
 
   return (
     <div className="space-y-12">
@@ -121,15 +156,42 @@ export default async function SuperAdminOverview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-           <div className="bg-[#0D1117] border border-white/5 rounded-[40px] p-8 min-h-[400px]">
+           <div className="bg-[#0D1117] border border-white/5 rounded-[40px] p-8 h-full">
              <div className="flex items-center justify-between mb-8">
                 <h3 className="text-sm font-black text-white uppercase tracking-widest">Platform Activity</h3>
                 <Link href="/superadmin/businesses" className="text-[10px] font-black text-[#D85A30] uppercase tracking-widest flex items-center gap-1 hover:underline">
                   Detailed Report <ChevronRight size={12} />
                 </Link>
              </div>
-             <div className="flex items-center justify-center h-full text-gray-600 text-xs font-bold py-20 uppercase tracking-widest italic border-2 border-dashed border-white/5 rounded-3xl">
-                Global Transaction Feed coming soon
+             
+             <div className="space-y-4">
+               {sales.map((sale) => (
+                 <div key={sale.id} className="flex items-center justify-between p-4 bg-white/[0.02] border border-white/5 rounded-2xl group hover:bg-white/5 transition-all">
+                    <div className="flex items-center gap-4">
+                       <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400">
+                          <Zap size={18} />
+                       </div>
+                       <div>
+                          <p className="text-xs font-black text-white uppercase tracking-tight">
+                            {sale.branches?.tenants?.name || 'Unknown Business'} • {sale.branches?.name || 'Main'}
+                          </p>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase">
+                            {new Date(sale.created_at).toLocaleTimeString()} via {sale.payment_method}
+                          </p>
+                       </div>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-sm font-black text-[#D85A30] tracking-tighter">KES {sale.total_amount.toLocaleString()}</p>
+                       <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Completed</p>
+                    </div>
+                 </div>
+               ))}
+               
+               {(!recentSales || recentSales.length === 0) && (
+                 <div className="flex items-center justify-center py-20 text-gray-600 text-[10px] font-black uppercase tracking-widest italic border-2 border-dashed border-white/5 rounded-3xl">
+                    No transactions recorded today
+                 </div>
+               )}
              </div>
            </div>
         </div>

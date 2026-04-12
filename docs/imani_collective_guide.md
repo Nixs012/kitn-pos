@@ -6,10 +6,16 @@ This guide walks through the lifecycle of using KiTN POS for a business like **I
 
 ## 🏗️ Phase 1: Onboarding & Deployment
 ### 1. Account Creation (Superadmin)
-The KiTN team registers Imani Collective as a **Tenant** in the `Superadmin` panel.
-- Setup Branding (Logo, Primary Colors).
-- Configure Kenya Tax settings (VAT 16%).
-- Assign the initial subscription plan (Basic/Pro).
+The KiTN team registers Imani Collective in the `Superadmin` panel:
+- **Registration**: Navigate to `Superadmin > Businesses` and click **"Register New Partner"**.
+- **Admin Configuration**: Input the business name (e.g., "Imani Collective"), location, and provide the primary **Store Admin's** email and a temporary password.
+- **Node Deployment**: Clicking "Deploy" automatically creates the Business Tenant, a default "Main Branch", and the root Admin account.
+
+### 2. Store Admin's First Login & Setup
+Once registered, the Store Admin receives their credentials:
+- **First Login**: Log in at `/login` as "ADMIN" using the provided email and password.
+- **Onboarding Interface**: On first login, the Admin is guided through the **KiTN Onboarding Flow** to refine their store details, add their opening hours, and upload their initial product catalog.
+- **System Initialization**: The system automatically prepares the POS terminal and Sales dashboards.
 
 ### 2. Physical Hardware Setup
 - Open `https://kitn-pos.vercel.app` on a tablet or PC at the shop.

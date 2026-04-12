@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { BusinessActions } from '@/app/superadmin/businesses/BusinessActions';
+import { BusinessHeader } from '@/app/superadmin/businesses/BusinessHeader';
 
 export default async function SuperAdminBusinesses() {
   const cookieStore = cookies();
@@ -82,15 +83,7 @@ export default async function SuperAdminBusinesses() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-3xl font-black tracking-tight text-white uppercase italic">Active Businesses</h2>
-          <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Manage platform partners and billing</p>
-        </div>
-        <div className="flex gap-3">
-          <Badge variant="gray" className="px-4 py-2 border-white/10 uppercase tracking-widest">{businessesWithMetrics.length} total</Badge>
-        </div>
-      </div>
+      <BusinessHeader totalCount={businessesWithMetrics.length} />
 
       <div className="bg-[#0D1117] border border-white/5 rounded-[40px] overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
