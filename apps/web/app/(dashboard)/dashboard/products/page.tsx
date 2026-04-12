@@ -55,8 +55,8 @@ interface Product {
   }[];
 }
 
-const CATEGORIES = [
-  'All', 'Flour & Grains', 'Cooking', 'Dairy', 'Bakery', 
+const DEFAULT_CATEGORIES = [
+  'Flour & Grains', 'Cooking', 'Dairy', 'Bakery', 
   'Drinks', 'Cleaning', 'Spices', 'Spreads', 'Personal Care'
 ];
 
@@ -479,21 +479,24 @@ export default function ProductsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 border ${
-                  selectedCategory === cat 
-                  ? 'bg-brand-green text-white border-brand-green shadow-lg shadow-brand-green/20 scale-105' 
-                  : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+          <div className="flex flex-wrap gap-2">
+          {['All', ...Array.from(new Set([
+            ...DEFAULT_CATEGORIES,
+            ...(products ?? []).map(p => p.category)
+          ]))].map(cat => (
+            <button 
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-6 py-2 rounded-full text-[10px] font-black tracking-widest transition-all duration-300 uppercase ${
+                selectedCategory === cat 
+                  ? 'bg-brand-green text-white shadow-lg shadow-brand-green/20 scale-105' 
+                  : 'bg-white border border-gray-100 text-gray-400 hover:border-brand-green hover:text-brand-green'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
         </div>
 
         {/* Summary Cards */}
@@ -519,7 +522,9 @@ export default function ProductsPage() {
                   </div>
                 </div>
                 <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em]">Categories</p>
-                <h3 className="text-3xl font-black text-brand-dark mt-1">{CATEGORIES.length - 1}</h3>
+                <h3 className="text-3xl font-black text-brand-dark mt-1">
+                  {Array.from(new Set([...DEFAULT_CATEGORIES, ...(products ?? []).map(p => p.category)])).length}
+                </h3>
               </div>
 
               <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm transition-all hover:shadow-md group">
@@ -767,17 +772,24 @@ export default function ProductsPage() {
 
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Category</label>
-              <select 
-                className="w-full bg-white border border-gray-100 rounded-[12px] px-4 py-3 text-sm font-bold text-brand-dark focus:ring-4 focus:ring-brand-green/10 focus:border-brand-green outline-none transition-all"
+              <Input 
+                placeholder="Type or select category"
+                list="product-categories"
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
-              >
-                {CATEGORIES.filter(c => c !== 'All').map(c => (
-                    <option key={c} value={c} className="text-black bg-white">
-                      {c}
-                    </option>
+                required
+                className="bg-white border-gray-100"
+              />
+              <datalist id="product-categories">
+                {DEFAULT_CATEGORIES.map(c => (
+                  <option key={c} value={c} />
+                ))}
+                {Array.from(new Set(products.map(p => p.category)))
+                  .filter(c => !DEFAULT_CATEGORIES.includes(c))
+                  .map(c => (
+                    <option key={c} value={c} />
                   ))}
-              </select>
+              </datalist>
               <FormError message={errors.category} />
             </div>
 

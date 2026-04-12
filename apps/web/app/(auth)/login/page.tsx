@@ -173,7 +173,12 @@ export default function LoginPage() {
                   <input type="checkbox" className="mr-1.5 rounded border-white/10 bg-white/5 text-brand-green focus:ring-brand-green" />
                   Remember me
                 </label>
-                <Link href="/forgot-password" className="text-brand-blue font-bold hover:text-brand-blue/80 transition-colors uppercase">FORGOT PASSWORD?</Link>
+                <Link 
+                  href="/forgot-password" 
+                  className="relative z-10 text-brand-blue font-bold hover:text-brand-blue/80 transition-colors uppercase cursor-pointer"
+                >
+                  FORGOT PASSWORD?
+                </Link>
               </div>
 
               <button
@@ -231,7 +236,10 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="text-center pt-2">
-                <Link href="/forgot-password" className="text-[10px] font-black tracking-widest text-gray-500 hover:text-brand-blue transition-colors uppercase">
+                <Link 
+                  href="/forgot-password" 
+                  className="relative z-10 text-[10px] font-black tracking-widest text-gray-500 hover:text-brand-blue transition-colors uppercase cursor-pointer"
+                >
                   Forgot PIN? Reset via Account Password
                 </Link>
               </div>
