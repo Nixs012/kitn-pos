@@ -45,8 +45,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Recovery system not initialized in DB' }, { status: 404 })
     }
 
-    // Hash the provided key and compare
-    const providedHash = crypto.createHash('sha256').update(key).digest('hex')
+    // Hash the provided key (trimmed) and compare
+    const trimmedKey = key.trim()
+    const providedHash = crypto.createHash('sha256').update(trimmedKey).digest('hex')
     console.log('Comparing hashes...');
 
     if (providedHash === data.value) {
