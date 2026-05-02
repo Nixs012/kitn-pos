@@ -113,13 +113,16 @@ export default function DashboardPage() {
       }
 
       // 2. Fetch Items Sold Today
-      const { data: itemsData } = await supabase
-        .from('sale_items')
-        .select('quantity')
+      const { data: salesWithItems } = await supabase
+        .from('sales')
+        .select('sale_items(quantity)')
         .gte('created_at', todayISO);
       
-      if (itemsData) {
-        const count = itemsData.reduce((acc, item) => acc + item.quantity, 0);
+      if (salesWithItems) {
+        const count = salesWithItems.reduce((acc, sale) => {
+          const items = sale.sale_items as unknown as { quantity: number }[];
+          return acc + (items?.reduce((iAcc, item) => iAcc + Number(item.quantity), 0) || 0);
+        }, 0);
         setStats(prev => ({ ...prev, itemsSold: count }));
       }
 
@@ -134,26 +137,38 @@ export default function DashboardPage() {
       setStats(prev => ({ ...prev, lowStock: lowStockCount }));
 
       // 4. Fetch Top Selling Products Today
-      const { data: topData } = await supabase
-        .from('sale_items')
-        .select(`
-          quantity,
-          products (name)
-        `)
-        .gte('created_at', todayISO);
+      if (salesWithItems) {
+        // We already have the sales and items from step 2 if we select products too
+        // But for clarity and to ensure we get product names, let's do a fresh fetch or reuse
+        const { data: topDataSales } = await supabase
+          .from('sales')
+          .select(`
+            sale_items (
+              quantity,
+              products (name)
+            )
+          `)
+          .gte('created_at', todayISO);
 
-      if (topData) {
-        const productMap: Record<string, number> = {};
-        topData.forEach((item: { quantity: number; products: { name: string } | Array<{ name: string }> | null }) => {
-          const product = Array.isArray(item.products) ? item.products[0] : item.products;
-          const name = (product as { name: string } | null)?.name || 'Unknown';
-          productMap[name] = (productMap[name] || 0) + item.quantity;
-        });
-        const sorted = Object.entries(productMap)
-          .map(([name, qty]) => ({ name, total_sales: qty }))
-          .sort((a, b) => b.total_sales - a.total_sales)
-          .slice(0, 5);
-        setTopProducts(sorted);
+        if (topDataSales) {
+          const productMap: Record<string, number> = {};
+          topDataSales.forEach((sale) => {
+            const items = (sale.sale_items as unknown as Array<{ 
+              quantity: number; 
+              products: { name: string } | Array<{ name: string }> | null 
+            }>) || [];
+            items.forEach((item) => {
+              const product = Array.isArray(item.products) ? item.products[0] : item.products;
+              const name = (product as { name: string } | null)?.name || 'Unknown';
+              productMap[name] = (productMap[name] || 0) + Number(item.quantity);
+            });
+          });
+          const sorted = Object.entries(productMap)
+            .map(([name, qty]) => ({ name, total_sales: qty }))
+            .sort((a, b) => b.total_sales - a.total_sales)
+            .slice(0, 5);
+          setTopProducts(sorted);
+        }
       }
 
     } catch (error) {
