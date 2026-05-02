@@ -608,7 +608,7 @@ export default function PosPage() {
 
   return (
     <ErrorBoundary section="POS Terminal">
-      <div className="h-[calc(100vh-140px)] flex flex-col gap-6 overflow-hidden">
+      <div className="h-[calc(100vh-140px)] flex flex-col gap-6 overflow-hidden bg-[#F4F7FA] -m-8 p-8">
       
       {/* Mobile Cart Toggle */}
       <div className="lg:hidden flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -784,11 +784,11 @@ export default function PosPage() {
 
             <div className="p-6 bg-gray-50/50 border-t border-gray-100 space-y-4">
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <div className="flex justify-between text-xs font-black text-gray-600 uppercase tracking-widest">
                   <span>Subtotal</span>
                   <span>{totals.subtotal.toLocaleString()} KES</span>
                 </div>
-                <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <div className="flex justify-between text-xs font-black text-gray-500 uppercase tracking-widest">
                   <span>VAT (16%)</span>
                   <span>{totals.vat.toLocaleString()} KES</span>
                 </div>
@@ -810,17 +810,17 @@ export default function PosPage() {
             </div>
             
             <div className="p-6 grid grid-cols-3 gap-3">
-              <button onClick={() => handleCharge('cash')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-blue/10 hover:text-brand-blue transition-all group">
-                <Banknote size={20} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Cash</span>
+              <button onClick={() => handleCharge('cash')} className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-brand-green/5 hover:border-brand-green/30 transition-all group shadow-sm active:scale-95">
+                <Banknote size={20} className="text-gray-500 group-hover:text-brand-green group-hover:scale-110 transition-all" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-700">Cash</span>
               </button>
-              <button onClick={() => handleCharge('mpesa')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-brand-green/10 hover:text-brand-green transition-all group">
-                <Smartphone size={20} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">M-Pesa</span>
+              <button onClick={() => handleCharge('mpesa')} className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-brand-green/5 hover:border-brand-green/30 transition-all group shadow-sm active:scale-95">
+                <Smartphone size={20} className="text-gray-500 group-hover:text-brand-green group-hover:scale-110 transition-all" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-700">M-Pesa</span>
               </button>
-              <button onClick={() => handleCharge('card')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-2xl hover:bg-purple-100 hover:text-purple-600 transition-all group">
-                <CreditCard size={20} className="group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Card</span>
+              <button onClick={() => handleCharge('card')} className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-purple-50 hover:border-purple-200 transition-all group shadow-sm active:scale-95">
+                <CreditCard size={20} className="text-gray-500 group-hover:text-purple-600 group-hover:scale-110 transition-all" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-700">Card</span>
               </button>
             </div>
           </div>

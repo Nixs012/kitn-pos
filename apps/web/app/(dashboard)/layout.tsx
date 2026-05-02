@@ -40,7 +40,7 @@ export default async function DashboardLayout({
   });
 
   return (
-    <div className="flex h-screen bg-[#F8F9FC] overflow-hidden selection:bg-brand-green/30">
+    <div className="flex h-screen bg-[#F4F7FA] overflow-hidden selection:bg-brand-green/30">
       <Suspense fallback={null}>
         <NavigationProgress />
       </Suspense>
@@ -73,7 +73,7 @@ export default async function DashboardLayout({
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-y-auto bg-[#F8F9FC] relative">
+        <main className="flex-1 overflow-y-auto bg-[#F4F7FA] relative">
           <div className="p-8 pb-20">
             <PageTransition>
               {children}
