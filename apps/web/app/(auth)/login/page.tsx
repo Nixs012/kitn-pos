@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import KitnLogo from '@/components/ui/KitnLogo'
 import * as toast from '@/lib/toast'
 import { Mail, Lock, ChevronRight, UserCircle2, ShieldCheck, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
 import Button from '@/components/ui/Button'
 
 type Role = 'admin' | 'manager' | 'cashier'
