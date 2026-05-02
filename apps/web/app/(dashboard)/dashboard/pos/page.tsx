@@ -755,7 +755,7 @@ export default function PosPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin min-h-0">
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale p-10">
                   <ShoppingCart size={64} className="mb-4" />
