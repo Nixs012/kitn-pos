@@ -731,7 +731,7 @@ export default function PosPage() {
         {/* Right Column: Checkout Terminal */}
         <div className={`
           ${showMobileCart ? 'flex absolute inset-0 z-40 bg-white p-4' : 'hidden'} 
-          lg:relative lg:flex lg:w-[400px] lg:bg-transparent lg:p-0
+          lg:relative lg:flex lg:flex-1 lg:max-w-[400px] lg:bg-transparent lg:p-0
           flex-col gap-4 animate-in slide-in-from-right-4 duration-300
         `}>
           <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm flex-1 flex flex-col overflow-hidden">

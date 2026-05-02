@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
       // 2. Fetch Items Sold Today
       const { data: itemsData } = await supabase
-        .from('sales_items')
+        .from('sale_items')
         .select('quantity')
         .gte('created_at', todayISO);
       
@@ -124,16 +124,18 @@ export default function DashboardPage() {
       }
 
       // 3. Fetch Low Stock Alerts
-      const { count: lowStockCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .filter('stock_quantity', 'lte', 'low_stock_threshold');
+      // Note: Comparing two columns (quantity <= reorder_level) requires an RPC or raw filter
+      // For simplicity in the dashboard, we fetch the inventory rows and count locally or use a view if available.
+      const { data: inventoryData } = await supabase
+        .from('inventory')
+        .select('quantity, reorder_level');
       
-      setStats(prev => ({ ...prev, lowStock: lowStockCount || 0 }));
+      const lowStockCount = (inventoryData || []).filter(i => i.quantity <= i.reorder_level).length;
+      setStats(prev => ({ ...prev, lowStock: lowStockCount }));
 
       // 4. Fetch Top Selling Products Today
       const { data: topData } = await supabase
-        .from('sales_items')
+        .from('sale_items')
         .select(`
           quantity,
           products (name)
