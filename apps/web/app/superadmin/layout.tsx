@@ -32,12 +32,14 @@ export default async function SuperAdminLayout({
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const recoveryCookie = cookieStore.get('kitn_recovery_access');
+  const hasRecoveryAccess = recoveryCookie?.value === 'true';
 
-  if (!user) {
+  if (!user && !hasRecoveryAccess) {
     redirect('/login');
   }
 
-  const isSuperAdmin = user.email?.endsWith('@kitnpos.co.ke') || SUPER_ADMINS.includes(user.email || '');
+  const isSuperAdmin = hasRecoveryAccess || user?.email?.endsWith('@kitnpos.co.ke') || SUPER_ADMINS.includes(user?.email || '');
 
   if (!isSuperAdmin) {
     redirect('/dashboard');

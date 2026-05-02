@@ -26,7 +26,12 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-  const hasRecoveryAccess = request.cookies.get('kitn_recovery_access')?.value === 'true';
+  const recoveryCookie = request.cookies.get('kitn_recovery_access');
+  const hasRecoveryAccess = recoveryCookie?.value === 'true';
+
+  if (hasRecoveryAccess) {
+    console.log('Middleware: Recovery access detected');
+  }
 
   const isPublicPath = 
     request.nextUrl.pathname.startsWith('/login') || 

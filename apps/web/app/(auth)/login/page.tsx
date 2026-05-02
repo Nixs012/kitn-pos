@@ -80,7 +80,8 @@ export default function LoginPage() {
       const data = await res.json()
       if (data.success) {
         toast.showSuccess('System Recovery Verified!')
-        router.push('/superadmin') 
+        // Force full reload so middleware recognizes the new recovery cookie
+        window.location.href = '/superadmin'
       } else {
         toast.showError(data.error || 'Recovery verification failed')
       }

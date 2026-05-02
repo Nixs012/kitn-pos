@@ -16,9 +16,13 @@ import Link from 'next/link';
 
 export default async function SuperAdminOverview() {
   const cookieStore = cookies();
+  const hasRecoveryAccess = cookieStore.get('kitn_recovery_access')?.value === 'true';
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    hasRecoveryAccess 
+      ? process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role if in recovery mode
+      : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
