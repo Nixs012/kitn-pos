@@ -70,18 +70,23 @@ export default function LoginPage() {
         body: JSON.stringify({ key: recoveryKey })
       })
 
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error('Recovery server error:', res.status, errorText)
+        toast.showError(`Server error (${res.status}): Please check if API is deployed`)
+        return
+      }
+
       const data = await res.json()
       if (data.success) {
         toast.showSuccess('System Recovery Verified!')
-        // Logic for what happens after recovery
-        // For example: Redirect to a global settings or admin reset page
         router.push('/superadmin') 
       } else {
         toast.showError(data.error || 'Recovery verification failed')
       }
     } catch (err) {
-      console.error('Recovery error:', err)
-      toast.showError('Network error: Unable to connect to recovery server')
+      console.error('Network/Recovery error:', err)
+      toast.showError('Network error: Is the server running?')
     } finally {
       setLoading(false)
       setIsRecoveryMode(false)
