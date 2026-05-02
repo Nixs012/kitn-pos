@@ -6,24 +6,29 @@ import {
   ShieldAlert, 
   Zap, 
   PowerOff,
-  Power
+  Power,
+  Building2
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { createClient } from '@/lib/supabase/client';
 import * as toast from '@/lib/toast';
+import ManageOutletsModal from './ManageOutletsModal';
 
 export const BusinessActions = ({ 
   tenantId, 
+  tenantName,
   currentPlan, 
   isSuspended 
 }: { 
   tenantId: string, 
+  tenantName: string,
   currentPlan: string, 
   isSuspended: boolean 
 }) => {
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [isOutletModalOpen, setIsOutletModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(currentPlan);
   const supabase = createClient();
@@ -80,6 +85,15 @@ export const BusinessActions = ({
 
   return (
     <div className="relative flex justify-end gap-2">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => setIsOutletModalOpen(true)}
+        className="text-[10px] font-black uppercase text-gray-500 hover:text-blue-400 gap-1.5"
+      >
+        <Building2 size={14} /> Outlets
+      </Button>
+
       <Button 
         variant="ghost" 
         size="sm" 
@@ -158,6 +172,14 @@ export const BusinessActions = ({
           </div>
         </div>
       </Modal>
+
+      {/* Outlets Management Modal */}
+      <ManageOutletsModal 
+        isOpen={isOutletModalOpen}
+        onClose={() => setIsOutletModalOpen(false)}
+        tenantId={tenantId}
+        tenantName={tenantName}
+      />
     </div>
   );
 };

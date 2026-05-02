@@ -27,6 +27,8 @@ import StockTransferModal from '@/components/outlets/StockTransferModal';
 import AddOutletModal from '@/components/outlets/AddOutletModal';
 import * as toast from '@/lib/toast';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import Modal from '@/components/ui/Modal';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 const BRAND_COLORS = ['#1D9E75', '#378ADD', '#D85A30', '#8B5CF6', '#EC4899', '#F59E0B'];
 
@@ -55,6 +57,9 @@ export default function OutletsPage() {
   
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [outletToDelete, setOutletToDelete] = useState<{id: string, name: string} | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!profile?.tenant_id) return;
@@ -149,6 +154,31 @@ export default function OutletsPage() {
     }
   }, [profile?.tenant_id, supabase]);
 
+  const handleDeleteOutlet = async () => {
+    if (!outletToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const { error } = await supabase
+        .from('branches')
+        .delete()
+        .eq('id', outletToDelete.id);
+
+      if (error) throw error;
+
+      toast.showSuccess(`Outlet "${outletToDelete.name}" deleted successfully`);
+      setIsDeleteModalOpen(false);
+      setOutletToDelete(null);
+      fetchData();
+    } catch (err: unknown) {
+      console.error('Delete error:', err);
+      const message = err instanceof Error ? err.message : 'Failed to delete outlet. Ensure it has no related sales or inventory records.';
+      toast.showError(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     document.title = 'Outlets — KiTN POS';
@@ -238,6 +268,11 @@ export default function OutletsPage() {
                 key={outlet.id}
                 {...outlet}
                 onManageStock={() => setIsTransferModalOpen(true)}
+                isAdmin={profile?.role === 'admin'}
+                onDelete={() => {
+                  setOutletToDelete({ id: outlet.id, name: outlet.name });
+                  setIsDeleteModalOpen(true);
+                }}
               />
             ))}
           </div>
@@ -303,6 +338,48 @@ export default function OutletsPage() {
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={fetchData}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => !isDeleting && setIsDeleteModalOpen(false)} 
+        title="Delete Outlet" 
+        size="sm"
+      >
+        <div className="space-y-6">
+          <div className="p-6 bg-red-50 rounded-3xl border-2 border-red-100 space-y-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-red-500 mx-auto">
+              <AlertTriangle size={32} />
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-lg font-black text-brand-dark tracking-tight">Are you absolutely sure?</h4>
+              <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                This will permanently delete the <span className="font-black text-red-600 uppercase tracking-widest">{outletToDelete?.name}</span> outlet. 
+                This action <span className="underline decoration-red-500 font-bold">cannot be undone</span>.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button 
+              variant="ghost" 
+              className="flex-1 py-4 font-black uppercase text-[10px] tracking-widest"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="flex-1 py-4 bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 font-black uppercase text-[10px] tracking-widest gap-2"
+              onClick={handleDeleteOutlet}
+              loading={isDeleting}
+            >
+              <Trash2 size={14} />
+              Confirm Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

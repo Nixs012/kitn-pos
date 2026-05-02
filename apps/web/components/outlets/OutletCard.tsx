@@ -32,6 +32,8 @@ export interface OutletCardProps {
   };
   lastUpdated: string;
   onManageStock: () => void;
+  onDelete?: () => void;
+  isAdmin?: boolean;
 }
 
 export default function OutletCard({
@@ -43,12 +45,24 @@ export default function OutletCard({
   metrics,
   stockHealth,
   lastUpdated,
-  onManageStock
+  onManageStock,
+  onDelete,
+  isAdmin = false
 }: OutletCardProps) {
   const healthColor = stockHealth.percentage > 80 ? 'bg-brand-green' : stockHealth.percentage > 40 ? 'bg-orange-500' : 'bg-red-500';
 
   return (
     <Card className="p-8 relative overflow-hidden group hover:border-brand-green/20 transition-all duration-500 bg-white shadow-sm border-gray-100/50">
+      {/* Delete Trigger - Only for Admins */}
+      {isAdmin && onDelete && (
+        <button 
+          onClick={(e) => { e.preventDefault(); onDelete(); }}
+          className="absolute top-8 right-8 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all z-20"
+          title="Delete Outlet"
+        >
+          <AlertTriangle size={18} />
+        </button>
+      )}
       {/* Header Section */}
       <div className="flex items-start justify-between mb-8">
         <div className="flex items-start gap-4">

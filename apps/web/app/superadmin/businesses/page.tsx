@@ -144,6 +144,7 @@ export default async function SuperAdminBusinesses() {
                   <td className="px-6 py-6">
                     <BusinessActions 
                         tenantId={biz.id} 
+                        tenantName={biz.name}
                         currentPlan={biz.subscriptions?.plan || 'free'} 
                         isSuspended={biz.suspended}
                     />

@@ -197,8 +197,8 @@ export default function OutletDetailPage() {
 
         <div className="flex items-center gap-3">
           <div className="bg-white p-3 pr-6 rounded-2xl border border-gray-100 flex items-center gap-3 shadow-sm h-fit">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 font-bold shrink-0">
-              {outletData.user_profiles?.find((u) => u.role === 'manager')?.full_name[0] || 'M'}
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 font-bold shrink-0 uppercase">
+              {outletData.user_profiles?.find((u) => u.role === 'manager')?.full_name?.[0] || 'M'}
             </div>
             <div>
               <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Manager</p>
