@@ -79,8 +79,9 @@ export default function LoginPage() {
       } else {
         toast.showError(data.error || 'Recovery verification failed')
       }
-    } catch {
-      toast.showError('System connection error during recovery')
+    } catch (err) {
+      console.error('Recovery error:', err)
+      toast.showError('Network error: Unable to connect to recovery server')
     } finally {
       setLoading(false)
       setIsRecoveryMode(false)
@@ -108,7 +109,7 @@ export default function LoginPage() {
               <KitnLogo size="lg" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-black text-white tracking-tight">Welcome Back</h1>
+              <h1 className="text-3xl font-black text-white tracking-tight">Welcome</h1>
               <p className="text-gray-400 text-sm font-medium">KiTN POS Enterprise Terminal</p>
             </div>
           </div>

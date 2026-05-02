@@ -10,11 +10,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Recovery key is required' }, { status: 400 })
     }
 
+    // Check environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('Missing Supabase environment variables');
+      return NextResponse.json({ error: 'System configuration missing' }, { status: 500 })
+    }
+
     // Initialize Supabase with Service Role Key to bypass RLS
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabase = createClient(supabaseUrl, serviceKey)
 
     // Fetch the hash from the database
     const { data, error } = await supabase
