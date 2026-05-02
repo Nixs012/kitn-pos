@@ -52,10 +52,22 @@ export async function POST(req: Request) {
 
     if (providedHash === data.value) {
       console.log('Recovery verified successfully');
-      return NextResponse.json({ 
+      
+      const response = NextResponse.json({ 
         success: true, 
         message: 'System access granted. Recovery mode active.',
       })
+
+      // Set a short-lived recovery cookie (15 mins)
+      response.cookies.set('kitn_recovery_access', 'true', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 15, // 15 minutes
+        path: '/'
+      })
+
+      return response
     } else {
       console.warn('Invalid recovery key attempt');
       return NextResponse.json({ error: 'Invalid recovery key' }, { status: 401 })
